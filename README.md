@@ -1,23 +1,30 @@
 # SDK Runtime Sample App
 
-This app provides an example of how to use the [SDK Runtime](https://privacysandbox.google.com/private-advertising/sdk-runtime): an Android 14 environment -with backward compatibility support through Jetpack-, that allows third-party SDKs to run in isolation from the app process, providing stronger safeguards for user data, increased security for apps and SDKs, and independent distribution.
+This project provides an example of how privacy-preserving SDKs are built and consumed in the [SDK Runtime](https://privacysandbox.google.com/private-advertising/sdk-runtime): an Android 14 environment -with backward compatibility support through Jetpack-, that allows third-party SDKs to run in isolation from the app process, providing stronger safeguards for user data, increased security for apps and SDKs, and independent distribution.
 
-For each app, there is one SDK Runtime process with a defined set of permissions and restrictions.
+- [Key concepts](#key-concepts)
+- [Project structure](#project-structure)
+- [Run the sample](#run-the-sample)
+- [Debug the sample](#debug-the-sample)
 
 ## Key concepts
+
+For each app, there is one SDK Runtime process with a defined set of permissions and restrictions.
 
 SDKs running inside this process are called **Runtime-Enabled SDKs**, or RE SDKs for short.
 
 SDK developers can choose to build a translation SDK to help apps with migration.
 These SDKs, which are aware of the SDK Runtime and interact with it, are called **Runtime Aware**, or RA SDKs.
 
-## Layout
+Learn more about building RE SDKs in the [SDK development guide](https://privacysandbox.google.com/private-advertising/sdk-runtime/developer-guide).
 
-This sample illustrates an advertising use case, consisting of a mediation platform in the SDK Runtime which mediates two ad networks: one in the SDK Runtime, and one statically linked to the app. Each ad network sample has its own adapter.
+## Project structure
 
-The project consists of the following modules:
+This sample illustrates an advertising use case, consisting of a [mediation platform](https://privacysandbox.google.com/private-advertising/sdk-runtime/mediation) in the SDK Runtime which mediates two ad networks: one in the SDK Runtime, and one statically linked to the app. Each ad network sample has its own adapter.
 
-![sdkrt-sample-diagram.png]
+The project has the following modules:
+
+![Project structure diagram](https://github.com/notmariazoe/privacy-sandbox-samples/blob/SDKRTsample-readme-update/PrivacySandboxKotlin/sdkrt-sample-diagram.png?raw=true)
 
 - **client-app**: An app that uses the `runtime-aware-sdk` to communicate with the `runtime-enabled-sdk`.
 - **runtime-enabled-sdk**: An SDK made to run in the SDK Runtime environment, also known as a Runtime Enabled (RE) SDK. In this example this RE SDK emulates the use case of a mediation SDK, with calls to other RE SDKs and statically-linked SDKs.
@@ -27,7 +34,7 @@ The project consists of the following modules:
 - **mediatee-sdk**: A runtime-enabled sample ad network SDK that `runtime-enabled-sdk` mediates.
 - **mediatee-sdk-adapter**: A runtime-enabled SDK that works as a mediation adapter for our mediation runtime-enabled SDK, `mediatee-sdk`.
 
-## Bundles
+### Android SDK Bundles (ASBs)
 
 Runtime-enabled SDKs have to be built as an [Android SDK Bundle (ASB)](https://developer.android.com/studio/command-line/bundletool#asb-format) before they can be published to an app store.
 
@@ -99,14 +106,17 @@ To attach a debugger to the SDKRT process, you have to:
 
 ### Debug initialization of the runtime-enable code
 
-Since the previous instructions require the SDK Runtime process to be already running, if you want to debug the initialization method, you'll have to start the SDK Runtime process manually first.
+Since the previous instructions require the SDK Runtime process to be already running, if you want to debug the initialization method, you'll have to start the app's SDK Runtime process manually first.
 
-To do this:
+To start the SDK Runtime process:
 
 - Ensure the client app is already running.
-- Enter these commands in the terminal to start the SDK Runtime process:
-  - `adb shell cmd deviceidle tempwhitelist com.example.privacysandbox.client`
-  - `adb shell cmd sdk_sandbox start com.example.privacysandbox.client`
-- Click the Run menu > Attach debugger to Android Process.
-- Choose com.example.privacysandbox.client_sdk_sandbox and click OK.
+- In the terminal, enter the following commands:
+ - `adb shell cmd deviceidle tempwhitelist com.example.privacysandbox.client`
+ - `adb shell cmd sdk_sandbox start com.example.privacysandbox.client`
+- In the **Run** menu, click **Attach debugger to Android Process**.
+
+Once you have started the SDK Runtime process, will be able to attach a debugger to it, and debug any breakpoints in the initialization method:
+
+- Select `com.example.privacysandbox.client_sdk_sandbox` and click **OK**.
 - Click Initialize SDK in the app.
