@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,38 +20,41 @@ import android.os.Bundle
 import android.util.Log
 import androidx.privacysandbox.sdkruntime.client.SdkSandboxManagerCompat
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
+import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.runtimeenabled.api.PaymentUiRequest
 import com.runtimeenabled.api.SdkService
 import com.runtimeenabled.api.SdkServiceFactory
-import com.inappmediateeadapter.implementation.InAppMediateeSdkAdapter
+
+/**
+ * This class represents an SDK that was created before the SDK runtime was available. It is in the
+ * process of migrating to use the SDK runtime. At this point, all of the functionality has been
+ * migrated to the "runtime enabled SDK" and this SDK merely serves as a wrapper.
+ */
 
 class ExistingSdk(private val context: Context) {
 
     /**
-     * Initialize the SDK and In-App adapters. If the SDK failed to initialize, return false, else
-     * true.
+     * Initialize the SDK. If the SDK failed to initialize, return false, else true.
      */
     suspend fun initialize(): Boolean {
         // You can also have a fallback mechanism here, where if the SDK cannot be loaded in the SDK
         // runtime, initialize as you usually would.
-        val isMediatorSdkLoaded = loadSdkIfNeeded(context) != null
-        if (isMediatorSdkLoaded) registerInAppMediateeAdapter()
-        return isMediatorSdkLoaded
+        val isRuntimeEnabledSdkLoaded = loadSdkIfNeeded(context) != null
+        return isRuntimeEnabledSdkLoaded
     }
 
-    suspend fun createFile(size: Int): String? {
-        if (!isSdkLoaded()) return null
-        return loadSdkIfNeeded(context)?.createFile(size)
-    }
-
-    /**
-     * In-App mediatee is initialised and registered from the App after Sdk is loaded.
-     *
-     * Once In-App mediatee transitions to run in Runtime process, this will not be done by the
-     * app anymore.
-     */
-    private fun registerInAppMediateeAdapter() {
-        val inAppMediateeSdkAdapter = InAppMediateeSdkAdapter(context)
-        remoteInstance?.registerInAppMediateeAdapter(inAppMediateeSdkAdapter)
+    suspend fun getSandboxedUiAdapter(
+        message: String,
+        amount: Double,
+        onPaymentSuccess: () -> Unit,
+        context: Context
+    ): SandboxedUiAdapter {
+        val request = PaymentUiRequest(message, amount)
+        return checkNotNull(
+            loadSdkIfNeeded(
+                context
+            )?.getPaymentUiAdapter(request, PaymentCallback(onPaymentSuccess))
+        ) { "Could not launch payment SDK!" }
     }
 
     /** Keeps a reference to a sandboxed SDK and makes sure it's only loaded once. */
@@ -80,8 +83,8 @@ class ExistingSdk(private val context: Context) {
 
                 val sandboxedSdk = sandboxManagerCompat.loadSdk(SDK_NAME, Bundle.EMPTY)
                 remoteInstance = SdkServiceFactory.wrapToSdkService(sandboxedSdk.getInterface()!!)
-                // Initialise Adapters and Mediatees.
-                remoteInstance?.initialise()
+                // Initialize SDK.
+                remoteInstance?.initialize()
                 return remoteInstance
             } catch (e: LoadSdkCompatException) {
                 Log.e(TAG, "Failed to load SDK, error code: ${e.loadSdkErrorCode}", e)

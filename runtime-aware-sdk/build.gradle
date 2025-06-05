@@ -46,8 +46,6 @@ dependencies {
     // Instead, the bundle contains information the SDK's API,
     // and the AGP Plugin used to generate sources and compile the app.
     debugImplementation project(':runtime-enabled-sdk-bundle')
-    debugImplementation project(':mediatee-sdk-adapter-bundle')
-    implementation project(':inapp-mediatee-sdk-adapter')
     implementation libs.androidx.appcompat
     implementation libs.bundles.sdkruntimeRASDK
 }

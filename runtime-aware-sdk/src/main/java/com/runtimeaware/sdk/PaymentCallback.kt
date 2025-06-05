@@ -13,10 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.runtimeenabled.api
+package com.runtimeaware.sdk
 
-import androidx.privacysandbox.tools.PrivacySandboxInterface
-import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import com.runtimeenabled.api.PaymentCallbackInterface
 
-@PrivacySandboxInterface
-interface SdkSandboxedUiAdapter : SandboxedUiAdapter
+/**
+ * Class that implements the interface declared by the runtime-enabled SDK.
+ */
+class PaymentCallback(private val callback: () -> Unit) : PaymentCallbackInterface {
+
+    override suspend fun onPaymentComplete() {
+        callback()
+    }
+}

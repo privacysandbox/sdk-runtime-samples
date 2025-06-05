@@ -15,8 +15,12 @@
  */
 package com.runtimeenabled.api
 
-import androidx.privacysandbox.tools.PrivacySandboxInterface
-import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import androidx.privacysandbox.tools.PrivacySandboxValue
 
-@PrivacySandboxInterface
-interface SdkSandboxedUiAdapter : SandboxedUiAdapter
+@PrivacySandboxValue
+data class PaymentUiRequest(
+    /** The name of the client app. */
+    val appName: String,
+    /** The price to charge the user */
+    val amount: Double
+)

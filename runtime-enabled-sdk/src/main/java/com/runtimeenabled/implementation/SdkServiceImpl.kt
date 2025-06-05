@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,168 +17,30 @@ package com.runtimeenabled.implementation
 
 import android.content.Context
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.RemoteException
 import android.util.Log
-import androidx.privacysandbox.sdkruntime.core.controller.SdkSandboxControllerCompat
-import androidx.privacysandbox.ui.client.SandboxedUiAdapterFactory
-import androidx.privacysandbox.ui.core.DelegatingSandboxedUiAdapter
 import androidx.privacysandbox.ui.core.ExperimentalFeatures
-import com.runtimeenabled.R
-import com.runtimeenabled.api.FullscreenAd
-import com.runtimeenabled.api.SdkBannerRequest
-import com.runtimeenabled.api.SdkService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
 import androidx.privacysandbox.ui.core.SandboxedSdkViewUiInfo
 import androidx.privacysandbox.ui.core.SessionObserver
 import androidx.privacysandbox.ui.core.SessionObserverContext
 import androidx.privacysandbox.ui.core.SessionObserverFactory
-import androidx.privacysandbox.ui.provider.toCoreLibInfo
-import com.runtimeenabled.api.MediateeAdapterInterface
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.runtimeenabled.api.PaymentCallbackInterface
+import com.runtimeenabled.api.PaymentUiRequest
+import com.runtimeenabled.api.SdkSandboxedUiAdapter
+import com.runtimeenabled.api.SdkService
 
 class SdkServiceImpl(private val context: Context) : SdkService {
 
-    private var inAppMediateeAdapter: MediateeAdapterInterface? = null
-    private var mediateeAdapter: MediateeAdapterInterface? = null
-
-    private val adapterSdkName = "com.mediateeadapter.sdk"
-    private val mediateeSdkName = "com.mediatee.sdk"
-    private val tag = "RuntimeEnabledSdk"
-
-    override suspend fun initialise() {
-        val sandboxController = SdkSandboxControllerCompat.from(context)
-        sandboxController.loadSdk(mediateeSdkName, Bundle.EMPTY)
-        // Adapter should only be loaded after Mediatee is loaded.
-        sandboxController.loadSdk(adapterSdkName, Bundle.EMPTY)
+    override suspend fun initialize() {
     }
 
-    override suspend fun getMessage(): String = "Hello from Runtime-enabled SDK!"
-
-    override suspend fun createFile(sizeInMb: Int): String {
-        val path = Paths.get(
-            context.applicationContext.dataDir.path, "file.txt"
-        )
-        withContext(Dispatchers.IO) {
-            Files.deleteIfExists(path)
-            Files.createFile(path)
-            val buffer = ByteArray(sizeInMb * 1024 * 1024)
-            Files.write(path, buffer)
-        }
-
-        val file = File(path.toString())
-        val actualFileSize: Long = file.length() / (1024 * 1024)
-        return "Created $actualFileSize MB file successfully"
-    }
-
-    // We return a Bundle here, not an interface that extends SandboxedUiAdapter. This is because
-    // for in app mediatees, the SandboxedUiAdapter received from the mediatee is directly returned
-    // by the mediator to the app, without any wrapper, to avoid nested remote rendering. Since
-    // this will need to be returned in a Bundle (one SDK cannot use a shim object defined by
-    // another SDK), return type for getBanner will always be a Bundle.
     @OptIn(ExperimentalFeatures.DelegatingAdapterApi::class)
-    override suspend fun getBanner(
-        request: SdkBannerRequest,
-        mediationType: String
-    ): Bundle? {
-        if (mediationType == context.getString(R.string.mediation_option_refresh_mediated_ads)) {
-            val runtimeMediateeBanner = SandboxedUiAdapterFactory.createFromCoreLibInfo(checkNotNull(
-                mediateeAdapter?.getBannerAd(
-                    request.appPackageName,
-                    request.activityLauncher,
-                    request.isWebViewBannerAd
-                )
-            ) { "No banner Ad received from mediatee!" })
-            // DelegatingSandboxedUiAdapter enables updating delegate from which different ads
-            // can be served without the client's involvement.
-            val delegatingAdapter = DelegatingSandboxedUiAdapter(
-                SdkSandboxedUiAdapterImpl(
-                    context,
-                    request,
-                    runtimeMediateeBanner
-                ).toCoreLibInfo(context)
-            )
-            // Launches a function to refresh the ad after a few seconds
-            CoroutineScope(Dispatchers.IO).launch {
-                updateDelegateAfterSomeDelay(request, delegatingAdapter);
-            }
-            return delegatingAdapter.toCoreLibInfo(context)
-        }
-        if (mediationType == context.getString(R.string.mediation_option_none)) {
-            val bannerAdAdapter = SdkSandboxedUiAdapterImpl(context, request, null)
-            bannerAdAdapter.addObserverFactory(SessionObserverFactoryImpl())
-            return bannerAdAdapter.toCoreLibInfo(context)
-        }
-        // For In-app mediatee, SandboxedUiAdapter returned by mediatee is not wrapped, it is
-        // directly returned to app. This is to avoid nested remote rendering.
-        // There is no overlay in this case for this reason.
-        if (mediationType == context.getString(R.string.mediation_option_inapp_mediatee)) {
-            return inAppMediateeAdapter?.getBannerAd(
-                        request.appPackageName,
-                        request.activityLauncher,
-                        request.isWebViewBannerAd
-                    )
-        }
-        return SdkSandboxedUiAdapterImpl(
-            context,
-            request,
-            SandboxedUiAdapterFactory.createFromCoreLibInfo(checkNotNull(
-                mediateeAdapter?.getBannerAd(
-                    request.appPackageName,
-                    request.activityLauncher,
-                    request.isWebViewBannerAd
-                )
-            ) { "No banner Ad received from mediatee!" })
-        ).toCoreLibInfo(context)
-    }
-
-    private suspend fun updateDelegateAfterSomeDelay(
-        request: SdkBannerRequest,
-        delegatingAdapter: DelegatingSandboxedUiAdapter
-    ) {
-        delay(10000)
-        val inAppMediateeBanner = inAppMediateeAdapter?.getBannerAd(
-            request.appPackageName,
-            request.activityLauncher,
-            request.isWebViewBannerAd
-        )
-        // Refresh the ad to show ads from another mediatee
-        if (inAppMediateeBanner != null) {
-            delegatingAdapter.updateDelegate(inAppMediateeBanner)
-        }
-    }
-
-    override suspend fun getFullscreenAd(mediationType: String): FullscreenAd {
-        if (mediationType == context.getString(R.string.mediation_option_none)) {
-            return FullscreenAdImpl(context, null, false)
-        }
-        val adapter: MediateeAdapterInterface?
-        if (mediationType == context.getString(R.string.mediation_option_inapp_mediatee)) {
-            inAppMediateeAdapter
-                ?: throw RemoteException("In-App mediatee SDK not registered with mediator SDK!")
-            adapter = inAppMediateeAdapter
-        } else {
-            mediateeAdapter
-                ?: throw RemoteException("Mediatee SDK not registered with mediator SDK!")
-            adapter = mediateeAdapter
-        }
-        adapter?.loadFullscreenAd()
-        return FullscreenAdImpl(context, adapter, true)
-    }
-
-    override fun registerMediateeAdapter(mediateeAdapter: MediateeAdapterInterface) {
-        this.mediateeAdapter = mediateeAdapter
-    }
-
-    override fun registerInAppMediateeAdapter(mediateeAdapter: MediateeAdapterInterface) {
-        inAppMediateeAdapter = mediateeAdapter
+    override suspend fun getPaymentUiAdapter(
+        request: PaymentUiRequest,
+        callback: PaymentCallbackInterface
+    ): SdkSandboxedUiAdapter {
+        val paymentUiAdapter = SdkSandboxedUiAdapterImpl(context, request, callback)
+        paymentUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
+        return paymentUiAdapter
     }
 }
 

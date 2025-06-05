@@ -15,8 +15,18 @@
  */
 package com.runtimeenabled.api
 
-import androidx.privacysandbox.tools.PrivacySandboxInterface
-import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import androidx.privacysandbox.tools.PrivacySandboxCallback
 
-@PrivacySandboxInterface
-interface SdkSandboxedUiAdapter : SandboxedUiAdapter
+/**
+ * Interface to be implemented by runtime-aware SDK.
+ *
+ * Runtime-aware SDK will create an object that implements this interface and pass it to the
+ * runtime-enabled SDK.
+ *
+ * This interface will then be used by the runtime-enabled SDK to communicate with the client app.
+ */
+@PrivacySandboxCallback
+interface PaymentCallbackInterface {
+    /** Function that is called on successful payment. */
+    suspend fun onPaymentComplete()
+}
