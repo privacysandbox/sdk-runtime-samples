@@ -13,10 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.runtimeenabled.api
+package com.example.client
 
-import androidx.privacysandbox.tools.PrivacySandboxInterface
-import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+import androidx.compose.runtime.Composable
 
-@PrivacySandboxInterface
-interface SdkSandboxedUiAdapter : SandboxedUiAdapter
+interface PaymentProviderInterface {
+    suspend fun initialize(
+        totalAmount: Double,
+        onConfirm: () -> Unit
+    )
+
+    @Composable
+    fun PaymentUi()
+}

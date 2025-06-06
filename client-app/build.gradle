@@ -16,6 +16,7 @@
 plugins {
     id "com.android.application"
     id "org.jetbrains.kotlin.android"
+    alias(libs.plugins.compose.compiler)
 }
 
 android {
@@ -32,6 +33,10 @@ android {
         versionName "1.01"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        compose true
     }
 
     buildTypes {
@@ -52,6 +57,16 @@ android {
 
 dependencies {
     implementation project(':runtime-aware-sdk')
+
+    implementation 'androidx.activity:activity-compose:1.7.0'
+    def composeBom = platform('androidx.compose:compose-bom:2025.05.00')
+    implementation composeBom
+    androidTestImplementation composeBom
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    implementation libs.bundles.sdkruntimeUI
 
     implementation libs.androidx.appcompat
     implementation libs.androidx.material

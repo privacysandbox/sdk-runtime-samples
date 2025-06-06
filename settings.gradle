@@ -31,14 +31,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PrivacySandboxSample"
+rootProject.name = "SdkrtBasics"
 include ':client-app'
 include ':runtime-enabled-sdk'
 include ':runtime-enabled-sdk-bundle'
-include ':inapp-mediatee-sdk'
-include ':inapp-mediatee-sdk-adapter'
-include ':mediatee-sdk'
-include ':mediatee-sdk-bundle'
-include ':mediatee-sdk-adapter'
-include ':mediatee-sdk-adapter-bundle'
 include ':runtime-aware-sdk'

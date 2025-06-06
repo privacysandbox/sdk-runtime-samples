@@ -33,6 +33,10 @@ annotation = "1.9.1"
 kotlinStdlibJdk8 = "2.1.10"
 androidxTestRunner = "1.6.2"
 
+[plugins]
+org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
 [libraries]
 # Plugins
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }

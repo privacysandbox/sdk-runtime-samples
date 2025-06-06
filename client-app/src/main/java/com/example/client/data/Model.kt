@@ -13,10 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.runtimeenabled.api
+package com.example.client.data
 
-import androidx.privacysandbox.tools.PrivacySandboxInterface
-import androidx.privacysandbox.ui.core.SandboxedUiAdapter
+data class MenuItem(
+    val id: String,
+    val name: String,
+    val description: String,
+    val price: Double,
+    val imageUrl: String? = null, // For image loading (e.g., from network or local resources)
+    val drawableResId: Int? = null // For local placeholder drawables (e.g., R.drawable.pizza)
+)
 
-@PrivacySandboxInterface
-interface SdkSandboxedUiAdapter : SandboxedUiAdapter
+data class OrderItem(
+    val menuItem: MenuItem,
+    var quantity: Int
+)

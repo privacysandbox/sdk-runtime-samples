@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 The Android Open Source Project
+ * Copyright (C) 2025 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,41 +15,15 @@
  */
 package com.runtimeenabled.api
 
-import android.os.Bundle
 import androidx.privacysandbox.tools.PrivacySandboxService
 
 @PrivacySandboxService
 interface SdkService {
 
-    /** Loads Mediatee and Adapter SDKs. */
-    suspend fun initialise()
+    suspend fun initialize()
 
-    suspend fun getMessage(): String
-
-    suspend fun createFile(sizeInMb: Int): String
-
-    /**
-     *  Returns a Bundle containing a SandboxedUiAdapter binder.
-     *
-     * We return a Bundle here, not an interface that extends SandboxedUiAdapter. This is because
-     * for in app mediatees, the SandboxedUiAdapter received from the mediatee is directly returned
-     * by the mediator to the app, without any wrapper, to avoid nested remote rendering. Since
-     * this will need to be returned in a Bundle (one SDK cannot use a shim object defined by
-     * another SDK), return type for getBanner will always be a Bundle.
-     */
-    suspend fun getBanner(request: SdkBannerRequest, mediationType: String): Bundle?
-
-    suspend fun getFullscreenAd(mediationType: String): FullscreenAd
-
-    /**
-     * Registers the Runtime-enabled mediatee adapter so that it can be used by the Mediator later
-     * to show ads.
-     */  
-    fun registerMediateeAdapter(mediateeAdapter: MediateeAdapterInterface)
-
-    /**
-     * Registers the In-App mediatee adapter so that it can be used by the Mediator later
-     * to show ads.
-     */
-    fun registerInAppMediateeAdapter(mediateeAdapter: MediateeAdapterInterface)
+    suspend fun getPaymentUiAdapter(
+        request: PaymentUiRequest,
+        callback: PaymentCallbackInterface
+    ): SdkSandboxedUiAdapter
 }
