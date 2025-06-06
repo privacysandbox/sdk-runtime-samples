@@ -1,0 +1,49 @@
+/*
+ * Copyright (C) 2023 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.runtimeaware.sdk'
+    privacySandbox {
+        enable = true
+    }
+    defaultConfig {
+        compileSdk 35
+        minSdk 21
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    // Note that here we depend on the bundle modules, not the sdk modules.
+    // While the libraries contain the SDK's logic, they lack the shim generated classes,
+    // and apps won't compile using its full classpath.
+    // Instead, the bundle contains information the SDK's API,
+    // and the AGP Plugin used to generate sources and compile the app.
+    debugImplementation project(':runtime-enabled-sdk-bundle')
+    implementation libs.androidx.appcompat
+    implementation libs.bundles.sdkruntimeRASDK
+}
