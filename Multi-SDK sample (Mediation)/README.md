@@ -1,8 +1,8 @@
 # SDK Runtime Sample App
 
-This project provides several examples of how privacy-preserving SDKs are built and consumed in the [SDK Runtime](https://privacysandbox.google.com/private-advertising/sdk-runtime): an Android 14 environment -with backward compatibility support through Jetpack-, that allows third-party SDKs to run in isolation from the app process, providing stronger safeguards for user data, increased security for apps and SDKs, and independent distribution.
+This project provides an example of how privacy-preserving SDKs are built and consumed in the [SDK Runtime](https://privacysandbox.google.com/private-advertising/sdk-runtime): an Android 14 environment -with backward compatibility support through Jetpack-, that allows third-party SDKs to run in isolation from the app process, providing stronger safeguards for user data, increased security for apps and SDKs, and independent distribution.
 
-- [Samples](#samples)
+- [Key concepts](#key-concepts)
 - [Project structure](#project-structure)
 - [Run the sample](#run-the-sample)
 - [Debug the sample](#debug-the-sample)
@@ -18,21 +18,21 @@ These SDKs, which are aware of the SDK Runtime and interact with it, are called 
 
 Learn more about building RE SDKs in the [SDK development guide](https://privacysandbox.google.com/private-advertising/sdk-runtime/developer-guide).
 
-## Samples
-
-This repository contains multiple samples demonstrating different SDK Runtime use cases:
-
-### Mediation Sample
+## Project structure
 
 This sample illustrates an advertising use case, consisting of a [mediation platform](https://privacysandbox.google.com/private-advertising/sdk-runtime/mediation) in the SDK Runtime which mediates two ad networks: one in the SDK Runtime, and one statically linked to the app. Each ad network sample has its own adapter.
 
-### Payments Sample
+The project has the following modules:
 
-This sample demonstrates a payment processing use case with a single Runtime Enabled SDK.
+![Project structure diagram](/sdkrt-sample-diagram.svg)
 
-### Starter Project
-
-This is a minimal project structure to help you get started building your own Runtime Enabled SDK. It includes an empty RE SDK module and the necessary setup to build and run it.
+- **client-app**: An app that uses the `runtime-aware-sdk` to communicate with the `runtime-enabled-sdk`.
+- **runtime-enabled-sdk**: An SDK made to run in the SDK Runtime environment, also known as a Runtime Enabled (RE) SDK. In this example this RE SDK emulates the use case of a mediation SDK, with calls to other RE SDKs and statically-linked SDKs.
+- **runtime-aware-sdk**: The Runtime Aware SDK, which is a statically linked SDK that serves as a translation layer between the client app and the RE SDK (`runtime-enabled-sdk`).
+- **in-app-mediatee-sdk**: A statically-linked sample ad network SDK that `runtime-enabled-sdk` mediates. This SDK is not runtime-aware, and serves as an example of an SDK not specifically built to work with the SDK Runtime.
+- **in-app-mediatee-sdk-adapter**: A statically linked, runtime-aware SDK that serves as mediation adapter for our static in-app sample ad network, `in-app-mediatee-sdk`.
+- **mediatee-sdk**: A runtime-enabled sample ad network SDK that `runtime-enabled-sdk` mediates.
+- **mediatee-sdk-adapter**: A runtime-enabled SDK that works as a mediation adapter for our mediation runtime-enabled SDK, `mediatee-sdk`.
 
 ### Android SDK Bundles (ASBs)
 
@@ -44,7 +44,7 @@ They are defined through the metadata of a library module, in their `build.gradl
 When an app or SDK wants to consume a runtime-enabled SDK, it has to depend on its bundle module, not the SDK module.
 
 This project contains the **mediatee-sdk-adapter-bundle**, **mediatee-sdk-bundle**, and **runtime-enabled-sdk-bundle** bundle modules.
-The payments sample has **payments-sdk-bundle** and the starter project has **starter-sdk-bundle**.
+
 ## Run the sample app
 
 The following section explains how to prepare your environment to launch the sample app, and debug code that executes in the SDK Runtime.
