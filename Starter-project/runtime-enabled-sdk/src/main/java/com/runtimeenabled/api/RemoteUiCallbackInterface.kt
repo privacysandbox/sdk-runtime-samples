@@ -27,6 +27,6 @@ import androidx.privacysandbox.tools.PrivacySandboxCallback
  */
 @PrivacySandboxCallback
 interface RemoteUiCallbackInterface {
-    /** Function that is called on successful payment. */
-    suspend fun onPaymentComplete()
+    /** Function that is called on when the user wants to do something. */
+    suspend fun onDoSomething()
 }

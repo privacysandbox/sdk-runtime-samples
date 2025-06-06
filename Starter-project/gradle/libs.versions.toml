@@ -16,6 +16,8 @@
 # If you update your kotlin, coroutines,
 # or SDK Runtime Jetpack library versions (Shim tools, Backcompat sdkrt, ui, activity),
 # make sure to also update the dependencies specified in `gradle.properties`.
+activityCompose = "1.10.1"
+composeBom = "2025.06.00"
 kotlin = "2.1.20"
 ksp = "2.1.20-1.0.31"
 agp = "8.9.2"
@@ -39,6 +41,11 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 
 [libraries]
 # Plugins
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+androidx-material3 = { module = "androidx.compose.material3:material3" }
+androidx-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+androidx-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 kotlin-gradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp-gradlePlugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin", version.ref = "ksp"}
 

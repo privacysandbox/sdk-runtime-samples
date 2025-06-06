@@ -12,13 +12,6 @@
      limitations under the License.
 -->
 <resources>
-    <string name="payment_company_label">ZenithPay</string>
-    <string name="payment_company_subtitle">Trusted Payment Gateway</string>
-    <string name="payment_label">Confirm Payment</string>
-    <string name="merchant_label">Merchant: %1$s</string>
-    <string name="payment_button_label">Confirm Payment</string>
-    <string name="subtotal_label">Subtotal:</string>
-    <string name="tax_label">Tax (8%):</string>
-    <string name="total_label">Total Amount:</string>
-    <string name="pin_entry_label">Enter 4-Digit PIN:</string>
+    <string name="message_string">Hello from runtime-enabled-sdk!</string>
+    <string name="button_string">Do something</string>
 </resources>

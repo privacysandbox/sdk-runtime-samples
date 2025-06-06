@@ -100,19 +100,11 @@ private class SdkUiSession(
     override val view: View = getRemoteView()
 
     private fun getRemoteView(): View {
-        val view = View.inflate(sdkContext, R.layout.payment, null).apply {
-            findViewById<TextView>(R.id.merchant_header_view).text =
-                context.getString(R.string.merchant_label, request.appName)
-            findViewById<TextView>(R.id.subtotal_value).text =
-                String.format("$%.2f", request.amount)
-            findViewById<TextView>(R.id.tax_value).text =
-                String.format("$%.2f", request.amount * 0.08)
-            findViewById<TextView>(R.id.total_value).text =
-                String.format("$%.2f", request.amount * 1.08)
-
-            findViewById<Button>(R.id.pay_button).setOnClickListener {
+        val view = View.inflate(sdkContext, R.layout.message, null).apply {
+            findViewById<TextView>(R.id.message).text = request.message
+            findViewById<Button>(R.id.button).setOnClickListener {
                 scope.launch {
-                    callback.onPaymentComplete()
+                    callback.onDoSomething()
                 }
             }
         }

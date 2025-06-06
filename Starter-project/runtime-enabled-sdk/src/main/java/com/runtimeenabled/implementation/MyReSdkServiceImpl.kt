@@ -16,10 +16,23 @@
 package com.runtimeenabled.implementation
 
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.privacysandbox.ui.core.ExperimentalFeatures
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.annotation.RequiresApi
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import androidx.privacysandbox.activity.core.SdkActivityLauncher
+import androidx.privacysandbox.sdkruntime.core.activity.ActivityHolder
+import androidx.privacysandbox.sdkruntime.core.activity.SdkSandboxActivityHandlerCompat
+import androidx.privacysandbox.sdkruntime.core.controller.SdkSandboxControllerCompat
 import androidx.privacysandbox.ui.core.SandboxedSdkViewUiInfo
+import androidx.privacysandbox.ui.core.SandboxedUiAdapterSignalOptions
 import androidx.privacysandbox.ui.core.SessionObserver
 import androidx.privacysandbox.ui.core.SessionObserverContext
 import androidx.privacysandbox.ui.core.SessionObserverFactory
@@ -27,28 +40,91 @@ import com.runtimeenabled.api.MyReSdkService
 import com.runtimeenabled.api.RemoteUiCallbackInterface
 import com.runtimeenabled.api.RemoteUiRequest
 import com.runtimeenabled.api.SdkSandboxedUiAdapter
-import com.runtimeenabled.api.SdkService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
+
 
 class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
 
+    private val controller = SdkSandboxControllerCompat.from(context)
+
     override suspend fun initialize() {
+    }
+
+    override suspend fun showFullscreenUi(activityLauncher: SdkActivityLauncher) {
+        val webView = WebView(context)
+        initializeWebViewSettings(webView.settings)
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView, request: WebResourceRequest
+            ): Boolean {
+                return false
+            }
+        }
+        webView.loadUrl("https://privacysandbox.google.com/")
+
+        val handler = object : SdkSandboxActivityHandlerCompat {
+            @RequiresApi(Build.VERSION_CODES.R)
+            override fun onActivityCreated(activityHolder: ActivityHolder) {
+                val activityHandler = ActivityHandler(activityHolder, webView)
+                activityHandler.buildLayout()
+
+                ViewCompat.setOnApplyWindowInsetsListener(
+                    activityHolder.getActivity().window.decorView) { view, windowInsets ->
+                    val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+                    view.updatePadding(top = insets.top)
+                    WindowInsetsCompat.CONSUMED
+                }
+            }
+        }
+
+        val token = controller.registerSdkSandboxActivityHandler(handler)
+        val launched = activityLauncher.launchSdkActivity(token)
+        if (!launched) controller.unregisterSdkSandboxActivityHandler(handler)
     }
 
     override suspend fun getRemoteUiAdapter(
         request: RemoteUiRequest,
         callback: RemoteUiCallbackInterface
     ): SdkSandboxedUiAdapter {
-        TODO("Not yet implemented")
+        val remoteUiAdapter = SdkSandboxedUiAdapterImpl(
+            context, request, callback
+        )
+        remoteUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
+        return remoteUiAdapter
     }
 
-    @OptIn(ExperimentalFeatures.DelegatingAdapterApi::class)
-    override suspend fun getPaymentUiAdapter(
-        request: RemoteUiRequest,
-        callback: RemoteUiCallbackInterface
-    ): SdkSandboxedUiAdapter {
-        val paymentUiAdapter = SdkSandboxedUiAdapterImpl(context, request, callback)
-        paymentUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
-        return paymentUiAdapter
+    @RequiresApi(Build.VERSION_CODES.O)
+    override suspend fun createFile(sizeInMb: Long): String {
+        val path = Paths.get(
+            context.applicationContext.dataDir.path, "file.txt"
+        )
+        withContext(Dispatchers.IO) {
+            Files.deleteIfExists(path)
+            Files.createFile(path)
+            val buffer = ByteArray(sizeInMb.toInt() * 1024 * 1024)
+            Files.write(path, buffer)
+        }
+
+        val file = File(path.toString())
+        val actualFileSize: Long = file.length() / (1024 * 1024)
+        return "Created $actualFileSize MB file successfully"
+    }
+
+    private fun initializeWebViewSettings(settings: WebSettings) {
+        settings.javaScriptEnabled = true
+        settings.setGeolocationEnabled(true)
+        settings.setSupportZoom(true)
+        settings.databaseEnabled = true
+        settings.domStorageEnabled = true
+        settings.allowFileAccess = true
+        settings.allowContentAccess = true
+        settings.useWideViewPort = true
+        settings.loadWithOverviewMode = true
+        settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
     }
 }
 
@@ -59,6 +135,11 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
  * and receive updates about UI container changes.
  */
 private class SessionObserverFactoryImpl : SessionObserverFactory {
+    override val signalOptions: Set<String> =
+        setOf(
+            SandboxedUiAdapterSignalOptions.GEOMETRY
+        )
+
     override fun create(): SessionObserver {
         return SessionObserverImpl()
     }

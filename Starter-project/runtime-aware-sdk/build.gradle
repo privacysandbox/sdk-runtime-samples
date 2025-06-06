@@ -25,9 +25,7 @@ android {
         enable = true
     }
     defaultConfig {
-        compileSdk 34
-        compileSdkExtension 12
-        targetSdk 34
+        compileSdk 35
         minSdk 21
     }
     compileOptions {

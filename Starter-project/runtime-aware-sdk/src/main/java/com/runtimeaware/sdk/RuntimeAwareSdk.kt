@@ -20,10 +20,8 @@ import android.os.Bundle
 import android.util.Log
 import androidx.privacysandbox.sdkruntime.client.SdkSandboxManagerCompat
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
-import androidx.privacysandbox.ui.core.SandboxedUiAdapter
-import com.runtimeenabled.api.PaymentUiRequest
-import com.runtimeenabled.api.SdkService
-import com.runtimeenabled.api.SdkServiceFactory
+import com.runtimeenabled.api.MyReSdkService
+import com.runtimeenabled.api.MyReSdkServiceFactory
 
 /**
  * This class represents an SDK that was created before the SDK runtime was available. It is in the
@@ -43,22 +41,18 @@ class RuntimeAwareSdk(private val context: Context) {
         return isRuntimeEnabledSdkLoaded
     }
 
-    suspend fun getSandboxedUiAdapter(
-        message: String,
-        amount: Double,
-        onPaymentSuccess: () -> Unit,
-        context: Context
-    ): SandboxedUiAdapter {
-        val request = PaymentUiRequest(message, amount)
-        return checkNotNull(
-            loadSdkIfNeeded(
-                context
-            )?.getPaymentUiAdapter(request, PaymentCallback(onPaymentSuccess))
-        ) { "Could not launch payment SDK!" }
+    suspend fun createFile(size: Long): String? {
+        if (!isSdkLoaded()) return null
+        return loadSdkIfNeeded(context)?.createFile(size)
     }
 
+//    suspend fun showFullscreenUi(context: Context) {
+//        if (!isSdkLoaded()) return
+//        loadSdkIfNeeded(context)?.showFullscreenUi(SdkActivityLauncherImpl(context))
+//    }
+
     /** Keeps a reference to a sandboxed SDK and makes sure it's only loaded once. */
-    internal companion object Loader {
+    companion object Loader {
 
         private const val TAG = "ExistingSdk"
 
@@ -69,9 +63,9 @@ class RuntimeAwareSdk(private val context: Context) {
          */
         private const val SDK_NAME = "com.runtimeenabled.sdk"
 
-        private var remoteInstance: SdkService? = null
+        private var remoteInstance: MyReSdkService? = null
 
-        suspend fun loadSdkIfNeeded(context: Context): SdkService? {
+        suspend fun loadSdkIfNeeded(context: Context): MyReSdkService? {
             try {
                 // First we need to check if the SDK is already loaded. If it is we just return it.
                 // The sandbox manager will throw an exception if we try to load an SDK that is
@@ -82,7 +76,7 @@ class RuntimeAwareSdk(private val context: Context) {
                 val sandboxManagerCompat = SdkSandboxManagerCompat.from(context)
 
                 val sandboxedSdk = sandboxManagerCompat.loadSdk(SDK_NAME, Bundle.EMPTY)
-                remoteInstance = SdkServiceFactory.wrapToSdkService(sandboxedSdk.getInterface()!!)
+                remoteInstance = MyReSdkServiceFactory.wrapToMyReSdkService(sandboxedSdk.getInterface()!!)
                 // Initialize SDK.
                 remoteInstance?.initialize()
                 return remoteInstance

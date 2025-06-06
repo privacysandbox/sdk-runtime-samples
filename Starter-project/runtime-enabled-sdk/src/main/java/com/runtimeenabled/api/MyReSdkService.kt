@@ -30,5 +30,5 @@ interface MyReSdkService {
         callback: RemoteUiCallbackInterface
     ): SdkSandboxedUiAdapter
 
-    suspend fun createFile(sizeInMb: Int): String
+    suspend fun createFile(sizeInMb: Long): String
 }
