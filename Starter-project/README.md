@@ -1,121 +1,91 @@
 # SDK Runtime Sample App
 
-This app provides an example of how to use
-the [SDK Runtime](https://privacysandbox.google.com/private-advertising/sdk-runtime), an Android
-feature that allows third-party SDKs to run in isolation from the app process, providing
-stronger safeguards for user data.
+This project provides a minimal, foundational template for developers looking to build a **Runtime-Enabled (RE) SDK**. 
+It demonstrates the fundamental architecture and communication patterns between a client application and an SDK running in the SDK Runtime.
 
-![Diagram of client app and SDK integration](/assets/screens.svg)
+This starter project uses the recommended **Wrapper Pattern**, where a client-facing
+**Runtime-Aware (RA) SDK** acts as a "shim" or wrapper around the core logic, which has been moved
+into the sandboxed **Runtime-Enabled (RE) SDK**. This approach allows for a phased migration with
+minimal disruption to apps consuming this SDK.
 
-> This image demonstrates the client app ("Ron's Cafe") invoking a runtime-enabled payment SDK
-> ("ZenithPay"). The "Pay Now" action transitions to the payment SDK UI, which is loaded and
-> executed within the SDK Runtime. All information input into the payment SDK UI is sandboxed,
-> enhancing user data privacy.
+## Key concepts
 
-The demo simulates an SDK that provides a payment processing UI. It's structured to specifically
-illustrate how an existing SDK can
-be [migrated in phases](https://privacysandbox.google.com/private-advertising/sdk-runtime/developer-guide/key-concepts#migrate_existing_sdks):
+For each app, there is one SDK Runtime process with a defined set of permissions and restrictions.
 
-* Core SDK functionality has been moved to a **runtime-enabled** component.
-* A **runtime-aware** component still exists, primarily acting as a wrapper for the new
-  runtime-enabled functionality.
+SDKs running inside this process are called **Runtime-Enabled SDKs**, or RE SDKs for short.
 
-![Diagram of module interaction](/assets/diagram.svg)
+SDK developers can choose to build a translation SDK to help apps with migration.
+These SDKs, which are aware of the SDK Runtime and interact with it, are called **Runtime Aware**, or RA SDKs.
 
-> This diagram illustrates module interaction during a phased SDK Runtime code migration. Arrows
-> show the `client-app` communicating with the `runtime-aware-sdk` (both in the app's runtime). The
-> `runtime-aware-sdk` then bridges to the `runtime-enabled-sdk`, which operates within the separate
-> SDK Runtime sandbox, isolating its process and data.
+Learn more about building RE SDKs in the [SDK development guide](https://privacysandbox.google.com/private-advertising/sdk-runtime/developer-guide).
 
-This setup allows client app developers to continue using the SDK with minimal changes while the SDK
-provider gradually transitions to the full SDK Runtime environment. The next logical step in this
-migration would be to eventually remove the runtime-aware wrapper, having client applications
-directly interface with the runtime-enabled SDK.
+Migrating to the SDK Runtime involves splitting your SDK into two modules that work
+together across a secure process boundary.
 
-## Purpose
+* **Runtime-Enabled (RE) SDK**: This is your sandboxed code. 
+  * It contains your core SDK logic and runs in a separate, isolated process with a restricted set of permissions.
+* **Runtime-Aware (RA) SDK**: This is the new client-facing library that app developers integrate. 
+  * It acts as a smart proxy, handling all the cross-process communication with the RE SDK,
+  * making it invisible to app developers.
 
-This demo aims to illustrate:
+## Project structure
 
-* The structure of a project utilizing the SDK Runtime.
-* How an SDK can be split into runtime-aware and runtime-enabled parts during a phased migration.
-* The interaction between a client application and an SDK undergoing this transition.
-* The typical module setup for such a scenario.
+This project is divided into the key modules required for the wrapper pattern.
 
-## Modules
+```mermaid
+flowchart TD
+ subgraph Modules["Dependency graph"]
+    direction TB
+        ClientApp("client-app")
+        RaSdk("runtime-aware-sdk")
+        ReSdk("runtime-enabled-sdk")
+        ReSdkBundle("runtime-enabled-sdk-bundle")
+  end
+    ClientApp --> RaSdk
+    RaSdk --> ReSdkBundle
+    ReSdkBundle --> ReSdk
 
-The project is divided into the following key modules:
+     ClientApp:::AppModule
+     RaSdk:::LibModule
+     ReSdk:::LibModule
+     ReSdkBundle:::BundleModule
+    classDef AppModule fill:#cce5ff,stroke: #99ccff
+    classDef LibModule fill:#d6eaf8,stroke:#aed6f1
+    classDef BundleModule fill:#e8daef,stroke:#d2b4de
+    style Modules stroke:#616161
+```
 
-### 1. `client-app`
+* **client-app**:
+    * A minimal Android application that acts as the client consuming the SDK.
+    * It demonstrates how to initialize the RA SDK and invoke its functions for data processing and displaying remote UI.
+* **runtime-aware-sdk**:
+    * The wrapper SDK that the client-app directly depends on.
+    * It provides the public API surface and handles loading the runtime-enabled-sdk into the sandbox.
+    * It also contains the `RemoteUiLayout class`, which manages rendering the sandboxed UI via a `SandboxedSdkView`.
+* **runtime-enabled-sdk**:
+    * The core SDK logic designed to run in the sandboxed SDK Runtime.
+    * It implements the actual functionality, such as creating a file in sandboxed storage and providing a UI for the client app to display.
+* **runtime-enabled-sdk-bundle**:
+    * An [Android SDK Bundle (ASB)](https://developer.android.com/studio/command-line/bundletool#asb-format) module.
+    * It defines the Runtime-Enabled SDK’s metadata, such as the package name used for loading the RE SDK in the Runtime, or defining its entry point.
+    * It also packages the runtime-enabled-sdk into the required format for publication.
 
-* **Description:** This is the main Android application module that acts as the client consuming the
-  SDK.
-* **Responsibilities:**
-    * Demonstrates how an app integrates with an SDK that is partially migrated to the SDK Runtime.
-    * Initializes and interacts with the `runtime-aware-sdk` module.
-    * Displays a simple UI (e.g., a list of items to "purchase") and triggers the payment SDK when
-      an action is performed.
-* **Key Learnings:** Shows how the app-to-SDK interaction might look during the transitional phase.
+## Features
 
-### 2. `runtime-aware-sdk` (Legacy/Wrapper SDK)
+This starter project provides clear examples of the most common migration patterns you'll need.
 
-* **Description:** This module represents the traditional part of the SDK that the `client-app`
-  directly depends on. In this demo, it primarily acts as a wrapper.
-* **Responsibilities:**
-    * Provides the public API surface that the `client-app` interacts with.
-    * Internally, it handles the logic to load and communicate with the `runtime-enabled-sdk` if the
-      SDK Runtime environment is available.
-    * It might contain some not yet migrated SDK logic, but in this specific demo, its main role is
-      to delegate calls to the `runtime-enabled-sdk`.
-* **Key Learnings:** Illustrates how an existing SDK can start adopting the SDK Runtime without
-  breaking changes for its consumers. It acts as a bridge to the newer, sandboxed functionality.
+* **SDK Loading**: See `RuntimeAwareSdk.kt` for how the RA SDK uses the `SdkSandboxManagerCompat` to load the RE SDK into the sandbox on-demand.
+* **Data-In, Data-Out API**: The createFile method shows how to call a sandboxed method with simple parameters (`Long`) and get a simple result (`String`) back. This is the most straightforward pattern.
+* **Remote UI (Banners/Views)**:
+    * The `RemoteUiLayout` class demonstrates the **`SandboxedUiAdapter` pattern**.
+    * The RE SDK creates a view and wraps it in a `SdkSandboxedUiAdapterImpl`.
+    * The RA SDK receives this adapter and uses it with a `SandboxedSdkView` to securely render the UI in the client app's layout, without giving the sandbox direct access to the app's UI hierarchy or vice versa.
+* **Cross-Process Callbacks**:
+    * The `RemoteUiCallbackInterface` demonstrates the use of the **`@PrivacySandboxCallback` annotation**.
+    * The client app (via the RA SDK) implements this interface and passes it to the RE SDK.
+    * The RE SDK can then invoke methods on this interface to trigger actions back in the app's process, as seen when the button in the remote UI is clicked.
 
-### 3. `runtime-enabled-sdk` (Migrated SDK)
-
-* **Description:** This module contains the core functionality of the SDK that is designed to run in
-  the sandboxed SDK Runtime environment.
-* **Responsibilities:**
-    * Implements the actual payment processing UI and logic.
-    * Defines the interface for how it communicates with the `runtime-aware-sdk` (or directly with
-      the client app in a future migration phase).
-    * This module's code is packaged into the `runtime-enabled-sdk-bundle`.
-* **Key Learnings:** Shows where the sandboxed code of your SDK resides. This is the part that
-  benefits from the enhanced privacy and security of the SDK Runtime.
-
-### 4. `runtime-enabled-sdk-bundle`
-
-* **Description:** This is
-  an [Android SDK Bundle (ASB)](https://developer.android.com/studio/command-line/bundletool#asb-format)
-  module. Its primary purpose is to package the `runtime-enabled-sdk` into the format required for
-  publishing to an app store and getting loaded by the SDK Runtime.
-* **Responsibilities:**
-    * Builds the `runtime-enabled-sdk` into an ASB.
-    * This ASB is what would be distributed to app developers via an app store for inclusion in
-      their apps. The `client-app` would then declare a dependency on this bundle.
-* **Key Learnings:** Demonstrates the packaging mechanism for the sandboxed part of your SDK.
-
-## Workflow Demonstrated
-
-This is the order of events after a user adds items to their cart and presses the "Pay Now" button:
-
-1. The `client-app` makes a call to a function in the `runtime-aware-sdk`.
-2. The `runtime-aware-sdk`, acting as a wrapper, checks for the SDK Runtime environment.
-3. It then loads the `runtime-enabled-sdk` (via the `runtime-enabled-sdk-bundle`) into the SDK
-   Runtime.
-4. The `runtime-aware-sdk` delegates the call to the loaded `runtime-enabled-sdk`.
-5. The `runtime-enabled-sdk` executes its core logic (e.g., displaying the payment UI and handling
-   payment processing) within the sandboxed environment.
-6. Results or callbacks are passed back from the `runtime-enabled-sdk` to the `runtime-aware-sdk`,
-   and subsequently to the `client-app`.
-
-## Future Steps (Beyond this Demo)
-
-* **Complete Migration:** Migrate any remaining SDK functionality from the `runtime-aware-sdk` to
-  the `runtime-enabled-sdk`. Remove the `runtime-aware-sdk` module.
-* **Direct Interaction:** The `client-app` would then directly interact with an SDK that is fully
-  runtime-enabled, typically by depending directly on the `runtime-enabled-sdk-bundle` and using
-  APIs provided by the SDK Runtime framework to load and communicate with it.
-
-## Build and Run
+## Run the sample app
 
 The following section explains how to prepare your environment to launch the sample app, and debug code that executes in the SDK Runtime.
 
@@ -144,46 +114,49 @@ This isn't necessary on emulators.
 
 ### Launch and use the client app
 
-1. Clone this repository.
-2. Open the project in Android Studio.
-3. Ensure your emulator or physical device are set up and running.
-4. Select the `client-app` configuration and run it.
+- Open the sample app project in Android Studio.
+- Press the Run button to install the SDKs and launch the client app.
+- Click Initialize SDK. A toast should show that SDK loaded successfully.
+- Click Show Banner View. A banner rendered by the SDK will be
+  displayed. If you click it, an Activity customized by the SDK will be launched.
+
+For more information, read the [documentation](https://privacysandbox.google.com/private-advertising/sdk-runtime).
 
 ## Debug the sample app
 
-### Debug the non runtime-enabled code
-
-The non runtime-enabled code is code that does not run in the SDK Runtime sandbox. This code
-includes the `client-app` and the `runtime-aware-sdk`. To debug this code:
-
-- In Android Studio, set breakpoints in the non runtime-enabled code.
-- Press the Debug button. This will launch the client app and attach a debugger to it.
+You can debug your client-side app as usual, but there is one more thing to do if you need to debug code in any of the Runtime-Enabled SDKs.
 
 ### Debug the runtime-enabled code
 
-The runtime-enabled code is code that does run in the SDK Runtime sandbox. This code includes the
-`runtime-enabled-sdk`. To debug this code:
+As RE SDKs run in a different process than the test app, you have to configure Android Studio to attach a debugger to the SDK Runtime process.
 
-- In Android Studio, set breakpoints in the runtime-enabled code.
-- Launch the client app.
-- In the client app, add items to your cart and click the Pay Now button. This will start the SDK
-  Runtime process.
-- Click the Run menu > Attach debugger to Android Process.
-- Choose com.example.privacysandbox.client_sdk_sandbox and click OK.
-- Once again, add items to your cart and click the Pay Now button to trigger the runtime-enabled
-  code.
+Otherwise, breakpoints in any of the RE SDKs won't work, failing silently.
+
+You can configure Android Studio to attach a debugger to the SDK Runtime process when debugging the app.
+For this, the SDK Runtime process has to be already running. If you need to debug the initialization of an RE SDK, and the SDK Runtime process, read the following section.
+
+To attach a debugger to the SDKRT process, you have to:
+
+- In the Run menu, click **Attach debugger to Android Process**.
+- Select **Show all processes**.
+- Find a process called `<CLIENT_APP_PROCESS>_sdk_sandbox`. In this case, it will be called `com.example.privacysandbox.client_sdk_sandbox`.
+- Select `com.example.privacysandbox.client_sdk_sandbox`, and click **OK**.
+
+**Note that** to be able to debug the SDK Runtime process, the client app has to be debuggable. Building with the debug variant should suffice.
 
 ### Debug initialization of the runtime-enable code
 
-In order to debug the initialization methods in the runtime-enabled code, you will have to start the
-SDK Runtime process manually. To do this:
+Since the previous instructions require the SDK Runtime process to be already running, if you want to debug the initialization method, you'll have to start the app's SDK Runtime process manually first.
 
-- In Android Studio, set breakpoints in the runtime-enabled code initialization method.
-- Launch the client app.
-- Enter these commands in the terminal to start the SDK Runtime process:
-    - `adb shell cmd deviceidle tempwhitelist com.example.privacysandbox.client`
-    - `adb shell cmd sdk_sandbox start com.example.privacysandbox.client`
-- Click the Run menu > Attach debugger to Android Process.
-- Choose com.example.privacysandbox.client_sdk_sandbox and click OK.
-- In the client app, add items to your cart and click the Pay Now button to start the SDK Runtime
-  process and trigger the initialization methods.
+To start the SDK Runtime process:
+
+- Ensure the client app is already running.
+- In the terminal, enter the following commands:
+- `adb shell cmd deviceidle tempwhitelist com.example.privacysandbox.client`
+- `adb shell cmd sdk_sandbox start com.example.privacysandbox.client`
+- In the **Run** menu, click **Attach debugger to Android Process**.
+
+Once you have started the SDK Runtime process, will be able to attach a debugger to it, and debug any breakpoints in the initialization method:
+
+- Select `com.example.privacysandbox.client_sdk_sandbox` and click **OK**.
+- Click Initialize SDK in the app.
