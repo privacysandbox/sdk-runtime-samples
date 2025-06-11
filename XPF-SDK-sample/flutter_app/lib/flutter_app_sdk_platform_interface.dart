@@ -1,24 +1,25 @@
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:flutter/widgets.dart';
-import 'flutter_app_method_channel.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-abstract class FlutterAppPlatform extends PlatformInterface {
-  /// Constructs a FlutterAppPlatform.
-  FlutterAppPlatform() : super(token: _token);
+import 'flutter_app_sdk_method_channel.dart';
+
+abstract class FlutterAppSdkPlatform extends PlatformInterface {
+  /// Constructs a FlutterAppSdkPlatform.
+  FlutterAppSdkPlatform() : super(token: _token);
 
   static final Object _token = Object();
 
-  static FlutterAppPlatform _instance = MethodChannelFlutterApp();
+  static FlutterAppSdkPlatform _instance = MethodChannelFlutterAppSdk();
 
-  /// The default instance of [FlutterAppPlatform] to use.
+  /// The default instance of [FlutterAppSdkPlatform] to use.
   ///
-  /// Defaults to [MethodChannelFlutterApp].
-  static FlutterAppPlatform get instance => _instance;
+  /// Defaults to [MethodChannelFlutterAppSdk].
+  static FlutterAppSdkPlatform get instance => _instance;
 
   /// Platform-specific implementations should set this with their own
-  /// platform-specific class that extends [FlutterAppPlatform] when
+  /// platform-specific class that extends [FlutterAppSdkPlatform] when
   /// they register themselves.
-  static set instance(FlutterAppPlatform instance) {
+  static set instance(FlutterAppSdkPlatform instance) {
     PlatformInterface.verifyToken(instance, _token);
     _instance = instance;
   }

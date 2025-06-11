@@ -10,6 +10,13 @@ android {
     privacySandbox {
         enable = true
     }
+//    buildFeatures {
+//        compose = true
+//    }
+//
+//    composeOptions {
+//        kotlinCompilerExtensionVersion = "1.7.8"
+//    }
 
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "27.0.12077973"

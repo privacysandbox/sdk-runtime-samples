@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
-import 'flutter_app_platform_interface.dart';
+import 'flutter_app_sdk_platform_interface.dart';
 
-/// An implementation of [FlutterAppPlatform] that uses method channels.
-class MethodChannelFlutterApp extends FlutterAppPlatform {
+/// An implementation of [FlutterAppSdkPlatform] that uses method channels.
+class MethodChannelFlutterAppSdk extends FlutterAppSdkPlatform {
   /// The method channel used to interact with the native platform.
   @visibleForTesting
   final methodChannel = const MethodChannel('flutter_app');

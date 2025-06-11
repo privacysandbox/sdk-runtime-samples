@@ -1,5 +1,5 @@
 name: flutter_app
-description: "A plugin created to demonstrate integration with Flutter."
+description: "A new Flutter plugin project."
 version: 0.0.1
 homepage:
 
@@ -36,7 +36,7 @@ flutter:
     platforms:
       android:
         package: com.example.flutter_app
-        pluginClass: FlutterAppPlugin
+        pluginClass: FlutterAppSdkPlugin
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:

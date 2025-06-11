@@ -13,14 +13,13 @@ import org.mockito.Mockito
  * you can run them directly from IDEs that support JUnit such as Android Studio.
  */
 
-internal class FlutterAppPluginTest {
+internal class FlutterAppSdkPluginTest {
   @Test
   fun onMethodCall_getPlatformVersion_returnsExpectedValue() {
-    val plugin = FlutterAppPlugin()
+    val plugin = FlutterAppSdkPlugin()
 
     val call = MethodCall("getPlatformVersion", null)
     val mockResult: MethodChannel.Result = Mockito.mock(MethodChannel.Result::class.java)
-    plugin.onMethodCall(call, mockResult)
 
     Mockito.verify(mockResult).success("Android " + android.os.Build.VERSION.RELEASE)
   }

@@ -26,7 +26,6 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.9.10" apply false
 }
 
-
 include(":app")
 include(":runtime-aware-sdk")
 project(":runtime-aware-sdk").projectDir = File("../../android/runtime-aware-sdk")
@@ -46,3 +45,4 @@ include(":inapp-mediatee-sdk-adapter")
 project(":inapp-mediatee-sdk-adapter").projectDir = File("../../android/inapp-mediatee-sdk-adapter")
 include(":inapp-mediatee-sdk")
 project(":inapp-mediatee-sdk").projectDir = File("../../android/inapp-mediatee-sdk")
+ 

@@ -1,14 +1,14 @@
-# Introducing the Fancy SDK: A Flutter Integration Example
+# Introducing the SDK: A Flutter Integration Example
 
-This project provides a clear and concise example of how to integrate the Fancy SDK into your Flutter applications using a Flutter plugin.
+This project provides a clear and concise example of how to integrate the SDK into your Flutter applications using a Flutter plugin.
 
 ## Getting Started: Preparing Your Development Environment
 To have this project configured properly in Android Studio you have to have the Flutter installed on the machine you're opening the project in (either virtual or stationary).
 Once you've cloned the repository, follow these initial steps to configure your Android Studio environment:
-1.  **Navigate to the Example Directory:** Open your terminal and change the current directory to the example project within `my_fancy_sdk`:
+1.  **Navigate to the Example Directory:** Open your terminal and change the current directory to the example project within `flutter_app`:
 
     ```bash
-    cd my_fancy_sdk/example
+    cd flutter_app/example
     ```
 
 2.  **Configure Project Dependencies:** Run the following Flutter command to ensure all necessary configurations are set up for Android Studio:
@@ -58,7 +58,7 @@ To run the example app and ensure the SDK is correctly initialized, please follo
     ```bash
     bundletool install-apks --apks=RuntimeAppDebug.apks
     ```
-After completing these steps, the example app should be running on your device or emulator with the Fancy SDK successfully initialized.
+After completing these steps, the example app should be running on your device or emulator with the SDK successfully initialized.
 
 ## Common Problems and Solutions
 You might encounter some issues during the setup. Here's a quick guide to troubleshoot them:

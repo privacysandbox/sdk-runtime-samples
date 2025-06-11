@@ -18,7 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LifecycleCoroutineScope
-import com.example.flutter_app.FlutterAppPlugin
+import com.example.flutter_app.FlutterAppSdkPlugin
 import com.runtimeaware.sdk.BannerAd
 import com.runtimeaware.sdk.FullscreenAd
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -29,23 +29,23 @@ import kotlinx.coroutines.CoroutineScope
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.*
 
-class FlutterApMethodChannelHandler(
+
+class FlutterAppSdkMethodChannelHandler (
     val runtimeAwareSdk: ExistingSdk,
     val context: Context,
     val activity: FragmentActivity,
     val linearLayouts: MutableMap<Int, LinearLayout>,
-) :
+    ) :
     MethodCallHandler {
-
-    val scope = CoroutineScope(Dispatchers.Main)
+        val scope = CoroutineScope(Dispatchers.Main)
     val viewsId = AtomicInteger(0)
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
-        Log.d("FlutterApp", "activity $activity")
+        Log.d("FlutterAppSdk", "activity $activity")
 
         when (call.method) {
             "initializeSdk" -> {
-                Log.d("FlutterApp", "before initializeSdk")
+                Log.d("FlutterAppSdk", "before initializeSdk")
                 scope.launch {
                     try {
                         if (!runtimeAwareSdk.initialize()) {
@@ -135,3 +135,5 @@ class FlutterApMethodChannelHandler(
         return { true }
     }
 }
+
+

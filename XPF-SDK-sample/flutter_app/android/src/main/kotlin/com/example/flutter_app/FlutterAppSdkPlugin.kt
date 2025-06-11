@@ -1,6 +1,5 @@
 package com.example.flutter_app
 
-
 import android.app.Activity
 import android.content.Context
 import android.util.Log
@@ -33,8 +32,9 @@ import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import java.util.concurrent.atomic.AtomicInteger
 
-/** FlutterAppPlugin */
-class FlutterAppPlugin: FlutterPlugin, ActivityAware {
+// Have to use the FlutterFragmentActivity instead of FlutterActivity
+// because we only want to show the view on the part of the screen.
+class FlutterAppSdkPlugin : FlutterPlugin, ActivityAware {
   val composeViews = mutableMapOf<Int, ComposeView>()
   val linearLayouts = mutableMapOf<Int, LinearLayout>()
   private lateinit var methodChannel: MethodChannel
@@ -43,7 +43,7 @@ class FlutterAppPlugin: FlutterPlugin, ActivityAware {
   private lateinit var context: Context
 
   override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-    Log.d("FlutterAppPlugin", "onAttachedToEngine")
+    Log.d("FlutterAppPluginSdk", "onAttachedToEngine")
 
     runtimeAwareSdk = ExistingSdk(binding.applicationContext)
 
@@ -62,23 +62,23 @@ class FlutterAppPlugin: FlutterPlugin, ActivityAware {
   }
 
   override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-    Log.d("FlutterAppPlugin", "onDetachedFromEngine")
+    Log.d("FlutterAppPluginSdk", "onDetachedFromEngine")
     methodChannel.setMethodCallHandler(null)
     activity = null
   }
 
   override fun onAttachedToActivity(binding: ActivityPluginBinding) {
-    Log.d("FlutterAppPlugin", "onAttachedToActivity, Activity Class: ${binding.activity.javaClass.name}")
+    Log.d("FlutterAppPluginSdk", "onAttachedToActivity, Activity Class: ${binding.activity.javaClass.name}")
     activity = binding.activity as? FlutterFragmentActivity
     if (activity == null) {
-      Log.e("FlutterAppPlugin", "Error: Could not cast activity to AppCompatActivity")
+      Log.e("FlutterAppPluginSdk", "Error: Could not cast activity to AppCompatActivity")
       // Optionally, you could try to defer handler creation or signal an error
       return
     } else {
-      Log.d("FlutterAppPlugin", "Activity is AppCompatActivity")
+      Log.d("FlutterAppPluginSdk", "Activity is AppCompatActivity")
     }
 
-    val methodChannelHandler = MyFancySdkMethodChannelHandler(
+    val methodChannelHandler = FlutterAppSdkMethodChannelHandler(
       runtimeAwareSdk,
       context,
       activity!!,
@@ -88,17 +88,17 @@ class FlutterAppPlugin: FlutterPlugin, ActivityAware {
   }
 
   override fun onDetachedFromActivityForConfigChanges() {
-    Log.d("FlutterAppPlugin", "onDetachedFromActivityForConfigChanges")
+    Log.d("FlutterAppPluginSdk", "onDetachedFromActivityForConfigChanges")
     activity = null
   }
 
   override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
     activity = binding.activity as? FlutterFragmentActivity
-    Log.d("FlutterAppPlugin", "Warning: Re-attached activity is not an AppCompatActivity")
+    Log.d("FlutterAppPluginSdk", "Warning: Re-attached activity is not an AppCompatActivity")
   }
 
   override fun onDetachedFromActivity() {
-    Log.d("FlutterAppPlugin", "onDetachedFromActivity")
+    Log.d("FlutterAppPluginSdk", "onDetachedFromActivity")
     activity = null
   }
 

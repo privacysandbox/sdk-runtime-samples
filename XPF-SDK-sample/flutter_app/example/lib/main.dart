@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/flutter_app.dart';
-import 'package:flutter_app/flutter_app.dart';
+import 'package:flutter_app/flutter_app_sdk.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +16,7 @@ class _MyAppState extends State<MyApp> {
   Widget _initializedSdkWidget = Text("");
   Widget _sdkWidget = SizedBox.shrink();
 
-  final _myFancySdkPlugin = FlutterApp();
+  final _flutterAppSdkPlugin = FlutterAppSdk();
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +30,8 @@ class _MyAppState extends State<MyApp> {
               _initializedSdkWidget,
               ElevatedButton(
                 onPressed: () async {
-                  final newSdkWidget = await _myFancySdkPlugin.initializeSdk();
+                  final newSdkWidget =
+                      await _flutterAppSdkPlugin.initializeSdk();
 
                   setState(() {
                     _initializedSdkWidget = newSdkWidget;
@@ -42,7 +42,7 @@ class _MyAppState extends State<MyApp> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  final newSdkWidget = await _myFancySdkPlugin.createFile();
+                  final newSdkWidget = await _flutterAppSdkPlugin.createFile();
                   setState(() {
                     _sdkWidget = newSdkWidget;
                   });
@@ -52,7 +52,8 @@ class _MyAppState extends State<MyApp> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  final newSdkWidget = await _myFancySdkPlugin.loadBannerAd();
+                  final newSdkWidget =
+                      await _flutterAppSdkPlugin.loadBannerAd();
                   setState(() {
                     _sdkWidget = newSdkWidget;
                   });
@@ -62,7 +63,7 @@ class _MyAppState extends State<MyApp> {
               SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
-                  await _myFancySdkPlugin.showFullscreenAd();
+                  await _flutterAppSdkPlugin.showFullscreenAd();
                 },
                 child: Text('Show fullscreen ad'),
               ),
