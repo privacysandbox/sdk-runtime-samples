@@ -81,9 +81,27 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
         return isRuntimeEnabledSdkLoaded
     }
 
-    suspend fun createFile(size: Long): String? {
-        if (!isSdkLoaded()) return null
-        return loadSdkIfNeeded()?.createFile(size)
+    suspend fun createFile(size: Long): Pair<Boolean, String?> {
+        if (!isSdkLoaded()) {
+            throw IllegalStateException("SDK not loaded. Please call initialize() first.")
+        }
+        try {
+            return Pair(true, loadSdkIfNeeded()?.createFile(size))
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create file", e)
+            return Pair(false, "Failed to create file: ${e.message}")
+        }
+    }
+
+    suspend fun triggerProcessDeath() {
+        if (!isSdkLoaded()) {
+            throw IllegalStateException("SDK not loaded. Please call initialize() first.")
+        }
+        try {
+            loadSdkIfNeeded()?.triggerProcessDeath()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to kill SDK runtime process", e)
+        }
     }
 
     // Inner class for the death callback

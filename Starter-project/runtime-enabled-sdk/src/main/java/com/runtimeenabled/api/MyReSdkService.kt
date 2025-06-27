@@ -31,4 +31,6 @@ interface MyReSdkService {
     ): SdkSandboxedUiAdapter
 
     suspend fun createFile(sizeInMb: Long): String
+
+    suspend fun triggerProcessDeath()
 }
