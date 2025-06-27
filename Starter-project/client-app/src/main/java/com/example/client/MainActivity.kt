@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val defaultFileSize = "1024" // Default file size in bytes
+        val defaultFileSize = "10" // Default file size in Mb
 
         // Optionally, you might want to attempt initial load here or let the user do it.
         // For this example, we'll let the user initiate the first load via button.
@@ -85,7 +85,7 @@ class MainActivity : AppCompatActivity() {
                                     return@launch
                                 }
                                 if (runtimeAwareSdk.createFile(fileSize) != null) {
-                                    makeToast("Created file of size $fileSize bytes from SDK!")
+                                    makeToast("Created file of size $fileSize Mb in the SDK's sandbox!")
                                 } else {
                                     makeToast("Failed to create file from SDK")
                                 }
@@ -127,7 +127,7 @@ fun MainScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Client App - SDK Demo") },
-                actions = { SdkStatusIndicator(sdkLoadStatus) } // Add status indicator to TopAppBar
+                actions = { SdkStatusIndicator(sdkLoadStatus) }
             )
         }
     ) { padding ->
@@ -158,13 +158,13 @@ fun MainScreen(
                 onClick = onShowSdkUi,
                 enabled = sdkLoadStatus == SdkLoadStatus.LOADED // Enable only if SDK is loaded
             ) {
-                Text("Show SDK UI via RemoteUiLayout")
+                Text("Show SDK-owned UI (using a RemoteUiLayout)")
             }
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
                 value = fileSizeInput,
                 onValueChange = { fileSizeInput = it },
-                label = { Text("File Size (bytes)") },
+                label = { Text("File Size (Mb)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(0.8f)
             )
@@ -186,7 +186,7 @@ fun SdkStatusIndicator(status: SdkLoadStatus) {
             SdkLoadStatus.NOT_LOADED -> Icons.Default.Clear
             SdkLoadStatus.LOADING -> Icons.Filled.Refresh
             SdkLoadStatus.LOADED -> Icons.Filled.Done
-            SdkLoadStatus.FAILED -> Icons.Filled.Clear // Or a specific error icon
+            SdkLoadStatus.FAILED -> Icons.Filled.Clear
         }
         val text = when (status) {
             SdkLoadStatus.NOT_LOADED -> "Not Loaded"

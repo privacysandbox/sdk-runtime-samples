@@ -15,6 +15,7 @@
  */
 package com.runtimeenabled.implementation
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -114,6 +115,7 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
         return "Created $actualFileSize MB file successfully"
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private fun initializeWebViewSettings(settings: WebSettings) {
         settings.javaScriptEnabled = true
         settings.setGeolocationEnabled(true)
