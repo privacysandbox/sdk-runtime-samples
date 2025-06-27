@@ -38,7 +38,7 @@ var showSdkDialogState = mutableStateOf(false)
 var remoteUiLayoutRef: RemoteUiLayout? = null
 
 class MainActivity : AppCompatActivity() {
-    private val runtimeAwareSdk by lazy { RuntimeAwareSdk(this) }
+    private val runtimeAwareSdk by lazy { RuntimeAwareSdk(applicationContext) }
     private var sdkLoadStatusState = mutableStateOf(SdkLoadStatus.NOT_LOADED)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,13 +48,18 @@ class MainActivity : AppCompatActivity() {
         // Optionally, you might want to attempt initial load here or let the user do it.
         // For this example, we'll let the user initiate the first load via button.
 
+        runtimeAwareSdk.setOnSandboxDeathCallback {
+            sdkLoadStatusState.value = SdkLoadStatus.FAILED
+        }
+
         setContent {
             MaterialTheme {
                 MainScreen(
                     sdkLoadStatus = sdkLoadStatusState.value,
                     initialFileSize = defaultFileSize,
                     onLoadSdk = {
-                        if (sdkLoadStatusState.value == SdkLoadStatus.LOADING || sdkLoadStatusState.value == SdkLoadStatus.LOADED) {
+                        if (sdkLoadStatusState.value == SdkLoadStatus.LOADING
+                            || sdkLoadStatusState.value == SdkLoadStatus.LOADED) {
                             makeToast("SDK is already loading or loaded.")
                             return@MainScreen
                         }
@@ -84,11 +89,21 @@ class MainActivity : AppCompatActivity() {
                                     makeToast("Invalid file size.")
                                     return@launch
                                 }
-                                if (runtimeAwareSdk.createFile(fileSize) != null) {
+                                val fileResult = runtimeAwareSdk.createFile(fileSize)
+                                if (fileResult.first) {
                                     makeToast("Created file of size $fileSize Mb in the SDK's sandbox!")
                                 } else {
-                                    makeToast("Failed to create file from SDK")
+                                    makeToast(fileResult.second!!)
                                 }
+                            }
+                        } else {
+                            makeToast("SDK not loaded. Please load the SDK first.")
+                        }
+                    },
+                    onTriggerProcessDeath = {
+                        if (sdkLoadStatusState.value == SdkLoadStatus.LOADED) {
+                            lifecycleScope.launch {
+                                runtimeAwareSdk.triggerProcessDeath()
                             }
                         } else {
                             makeToast("SDK not loaded. Please load the SDK first.")
@@ -121,7 +136,8 @@ fun MainScreen(
     initialFileSize: String,
     onLoadSdk: () -> Unit,
     onShowSdkUi: () -> Unit,
-    onCreateFileFromSdk: (String) -> Unit
+    onCreateFileFromSdk: (String) -> Unit,
+    onTriggerProcessDeath: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -156,7 +172,7 @@ fun MainScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = onShowSdkUi,
-                enabled = sdkLoadStatus == SdkLoadStatus.LOADED // Enable only if SDK is loaded
+                enabled = sdkLoadStatus == SdkLoadStatus.LOADED
             ) {
                 Text("Show SDK-owned UI (using a RemoteUiLayout)")
             }
@@ -171,9 +187,16 @@ fun MainScreen(
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = { onCreateFileFromSdk(fileSizeInput) },
-                enabled = sdkLoadStatus == SdkLoadStatus.LOADED // Enable only if SDK is loaded
+                enabled = sdkLoadStatus == SdkLoadStatus.LOADED
             ) {
                 Text("Create File from SDK")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = { onTriggerProcessDeath() },
+                enabled = sdkLoadStatus == SdkLoadStatus.LOADED
+            ) {
+                Text("Force SDK Runtime process crash")
             }
         }
     }
