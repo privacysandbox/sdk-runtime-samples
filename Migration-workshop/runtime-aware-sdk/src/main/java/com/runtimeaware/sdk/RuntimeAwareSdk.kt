@@ -18,11 +18,14 @@ package com.runtimeaware.sdk
 import android.content.Context
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import androidx.privacysandbox.sdkruntime.client.SdkSandboxManagerCompat
 import androidx.privacysandbox.sdkruntime.client.SdkSandboxProcessDeathCallbackCompat
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
 import com.runtimeenabled.api.MyReSdkService
 import com.runtimeenabled.api.MyReSdkServiceFactory
+import com.runtimeenabled.api.RemotePdfCallbackInterface
+import com.runtimeenabled.api.RemotePdfRequest
 import java.util.concurrent.Executor // Required for the callback
 
 /**
@@ -133,6 +136,49 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
             // }
         }
     }
+
+//    // In your RuntimeAwareSdk (simplified concept)
+//// This method would internally call MyReSdkService.getPdfUiAdapter
+//    suspend fun createPdfView(
+//        // For now, no specific parameters from client, as they are hardcoded in SDK
+//        // In the future, you'd pass RemotePdfRequest here
+//        onSuccess: () -> Unit,
+//        onError: () -> Unit,
+//        onSaved: () -> Unit // Assuming these are the callbacks from RemotePdfCallbackInterface
+//    ): View? {
+//
+//
+//        // In a real scenario, you'd construct a RemotePdfRequest here
+//        val dummyRequest = RemotePdfRequest(
+//            url = "hardcoded_or_default_url_in_sdk_for_now",
+//            title = "PDF Title",
+//            saveTo = null,
+//            enableDownload = false,
+//            password = null
+//        )
+//
+//        val callback = RemotePdfCallbackInterface() {
+//            override fun onPdfSuccess() {
+//                onSuccess()
+//            }
+//            override fun onPdfError() {
+//                onError()
+//            }
+//            override fun onPdfSaved() {
+//                onSaved()
+//            }
+//        }
+//        // This is the key call to get the SandboxedUiAdapter
+//        val sdkSandboxedUiAdapter = loadSdkIfNeeded()?.getPdfUiAdapter(dummyRequest, callback)
+//
+//        // The client then uses this adapter to create a view
+//        // The PrivacySandboxU solche I Jetpack library provides helpers for this.
+//        // For simplicity here, we'll assume a method that directly returns a View
+//        // after the client library has processed the adapter.
+//        // In a real app, you'd use SandboxedSdkProvider.createViewFromAdapter(sdkSandboxedUiAdapter, activity, ...)
+//        // For now, let's represent this with a placeholder:
+//        return viewProvider.createViewFromAdapter(sdkSandboxedUiAdapter, /* activity or context */, /* token */)
+//    }
 
     // Expose these methods from the instance, calling the companion object's methods
     // This allows the instance to manage context and sandboxManager properly.

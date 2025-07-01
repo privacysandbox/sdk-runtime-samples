@@ -39,6 +39,8 @@ import androidx.privacysandbox.ui.core.SessionObserver
 import androidx.privacysandbox.ui.core.SessionObserverContext
 import androidx.privacysandbox.ui.core.SessionObserverFactory
 import com.runtimeenabled.api.MyReSdkService
+import com.runtimeenabled.api.RemotePdfCallbackInterface
+import com.runtimeenabled.api.RemotePdfRequest
 import com.runtimeenabled.api.RemoteUiCallbackInterface
 import com.runtimeenabled.api.RemoteUiRequest
 import com.runtimeenabled.api.SdkSandboxedUiAdapter
@@ -66,8 +68,27 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
         callback: RemoteUiCallbackInterface
     ): SdkSandboxedUiAdapter {
         val remoteUiAdapter = SdkSandboxedUiAdapterImpl(
-            context, request, callback
-        )
+            context,
+            request,
+            callback
+        ) { sdkCtx, req, cb, clientEx ->
+            SdkMessageUiSession(clientExecutor = clientEx, sdkContext = sdkCtx, request = req, callback = cb)
+        }
+        remoteUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
+        return remoteUiAdapter
+    }
+
+    override suspend fun getPdfUiAdapter(
+        request: RemotePdfRequest,
+        callback: RemotePdfCallbackInterface
+    ): SdkSandboxedUiAdapter {
+        val remoteUiAdapter = SdkSandboxedUiAdapterImpl(
+            context,
+            request,
+            callback
+        ) { sdkCtx, req, cb, clientEx ->
+            SdkPdfUiSession(clientExecutor = clientEx, sdkContext = sdkCtx, request = req, remoteCallback = cb)
+        }
         remoteUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
         return remoteUiAdapter
     }

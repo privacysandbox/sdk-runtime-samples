@@ -34,6 +34,8 @@ enum class SdkLoadStatus {
 
 // State to control the visibility of the dialog containing RemoteUiLayout
 var showSdkDialogState = mutableStateOf(false)
+var showSdkPdfViewState = mutableStateOf(false)
+
 // To hold a reference to RemoteUiLayout for calling its methods
 var remoteUiLayoutRef: RemoteUiLayout? = null
 
@@ -81,6 +83,13 @@ class MainActivity : AppCompatActivity() {
                             makeToast("SDK not loaded. Please load the SDK first.")
                         }
                     },
+                    onShowSdkPdfView = {
+                        if (sdkLoadStatusState.value == SdkLoadStatus.LOADED) {
+                            showSdkPdfViewState.value = true
+                        } else {
+                            makeToast("SDK not loaded. Please load the SDK first.")
+                        }
+                    },
                     onCreateFileFromSdk = { fileSizeString ->
                         if (sdkLoadStatusState.value == SdkLoadStatus.LOADED) {
                             lifecycleScope.launch {
@@ -120,6 +129,15 @@ class MainActivity : AppCompatActivity() {
                         }
                     )
                 }
+                if (showSdkPdfViewState.value) {
+                    SdkPdfView(
+                        onDismiss = {
+                            showSdkPdfViewState.value = false
+                            remoteUiLayoutRef?.clearUi()
+                            remoteUiLayoutRef = null
+                        }
+                    )
+                }
             }
         }
     }
@@ -136,6 +154,7 @@ fun MainScreen(
     initialFileSize: String,
     onLoadSdk: () -> Unit,
     onShowSdkUi: () -> Unit,
+    onShowSdkPdfView: () -> Unit,
     onCreateFileFromSdk: (String) -> Unit,
     onTriggerProcessDeath: () -> Unit
 ) {
@@ -174,7 +193,14 @@ fun MainScreen(
                 onClick = onShowSdkUi,
                 enabled = sdkLoadStatus == SdkLoadStatus.LOADED
             ) {
-                Text("Show SDK-owned UI (using a RemoteUiLayout)")
+                Text("Show a message in SDK-owned UI (using a RemoteUiLayout)")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onShowSdkPdfView,
+                enabled = sdkLoadStatus == SdkLoadStatus.LOADED
+            ) {
+                Text("Show a PDF from the SDK")
             }
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedTextField(
@@ -243,8 +269,39 @@ fun SdkUiDialog(onDismiss: () -> Unit) {
                 RemoteUiLayout(ctx).also { layout ->
                     remoteUiLayoutRef = layout
                     coroutineScope.launch {
-                        layout.presentUiFromMyReSdk(
+                        layout.presentMessageUiFromMyReSdk(
                             message = "Hello from Client via RemoteUiLayout!",
+                            onSuccess = {
+                                (ctx as? MainActivity)?.runOnUiThread {
+                                    Toast.makeText(ctx, "SDK UI flow complete (RemoteUiLayout)!", Toast.LENGTH_SHORT).show()
+                                }
+                                onDismiss()
+                            }
+                        )
+                    }
+                }
+            },
+            update = { /* No update needed for this simple case */ }
+        )
+    }
+}
+
+@Composable
+fun SdkPdfView(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
+    Dialog(onDismissRequest = onDismiss) {
+        AndroidView(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp),
+            factory = { ctx ->
+                RemoteUiLayout(ctx).also { layout ->
+                    remoteUiLayoutRef = layout
+                    coroutineScope.launch {
+                        layout.presentPdfUiFromMyReSdk(
+                            url = "https://css4.pub/2017/newsletter/drylab.pdf",
                             onSuccess = {
                                 (ctx as? MainActivity)?.runOnUiThread {
                                     Toast.makeText(ctx, "SDK UI flow complete (RemoteUiLayout)!", Toast.LENGTH_SHORT).show()
