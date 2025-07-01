@@ -30,6 +30,11 @@ interface MyReSdkService {
         callback: RemoteUiCallbackInterface
     ): SdkSandboxedUiAdapter
 
+    suspend fun getPdfUiAdapter(
+        request: RemotePdfRequest,
+        callback: RemotePdfCallbackInterface
+    ): SdkSandboxedUiAdapter
+
     suspend fun createFile(sizeInMb: Long): String
 
     suspend fun triggerProcessDeath()
