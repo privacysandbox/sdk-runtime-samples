@@ -54,6 +54,7 @@ dependencies {
     implementation libs.bundles.sdkruntimeBackcompat
     implementation libs.bundles.sdkruntimeUI
     implementation libs.sdkruntime.tools.tools
+    implementation libs.pdfviewer
     ksp libs.androidx.annotation
     ksp libs.sdkruntime.tools.apicompiler
 }

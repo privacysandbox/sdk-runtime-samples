@@ -34,6 +34,7 @@ coroutines = "1.10.2"
 annotation = "1.9.1"
 kotlinStdlibJdk8 = "2.1.10"
 androidxTestRunner = "1.6.2"
+pdfViewer = "2.3.7"
 
 [plugins]
 org-jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
@@ -79,6 +80,9 @@ sdkruntime-tools-tools = { module = "androidx.privacysandbox.tools:tools", versi
 sdkruntime-tools-apicompiler = { module = "androidx.privacysandbox.tools:tools-apicompiler", version.ref = "sdkRuntimeShim" }
 sdkruntime-tools-apigenerator = { module = "androidx.privacysandbox.tools:tools-apigenerator", version.ref = "sdkRuntimeShim" }
 sdkruntime-tools-apipackager = { module = "androidx.privacysandbox.tools:tools-apipackager", version.ref = "sdkRuntimeShim" }
+
+# PDF Viewer (SDK migration workshop)
+pdfviewer = { module = "io.github.afreakyelf:Pdf-Viewer", version.ref = "pdfViewer" }
 
 [bundles]
 coroutines = ["kotlinx-coroutines-core", "kotlinx-coroutines-android"]
