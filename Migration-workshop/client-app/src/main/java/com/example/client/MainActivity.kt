@@ -287,9 +287,10 @@ fun SdkUiDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-fun SdkPdfView(onDismiss: () -> Unit) {
+fun SdkPdfViewOld(onDismiss: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    var layoutRef: RemoteUiLayout? = null
 
     Dialog(onDismissRequest = onDismiss) {
         AndroidView(
@@ -298,7 +299,7 @@ fun SdkPdfView(onDismiss: () -> Unit) {
                 .height(400.dp),
             factory = { ctx ->
                 RemoteUiLayout(ctx).also { layout ->
-                    remoteUiLayoutRef = layout
+                    layoutRef = layout
                     coroutineScope.launch {
                         layout.presentPdfUiFromMyReSdk(
                             url = "https://css4.pub/2017/newsletter/drylab.pdf",
@@ -306,13 +307,49 @@ fun SdkPdfView(onDismiss: () -> Unit) {
                                 (ctx as? MainActivity)?.runOnUiThread {
                                     Toast.makeText(ctx, "SDK UI flow complete (RemoteUiLayout)!", Toast.LENGTH_SHORT).show()
                                 }
-                                onDismiss()
                             }
                         )
                     }
                 }
             },
-            update = { /* No update needed for this simple case */ }
+            update = { /* No update needed for this simple case */ },
+            onRelease = {
+                layoutRef?.clearUi()
+            }
         )
+    }
+}
+
+@Composable
+fun SdkPdfView(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+
+    // This is still correct: it ensures the RemoteUiLayout itself isn't re-created by Compose.
+    val remoteUiLayout = remember {
+        RemoteUiLayout(context)
+    }
+
+    Dialog(onDismissRequest = {
+        onDismiss()
+    }) {
+        // This is still correct: it hosts our stable RemoteUiLayout.
+        AndroidView(
+            factory = { remoteUiLayout },
+            modifier = Modifier.fillMaxWidth().height(400.dp),
+            onRelease = {
+                remoteUiLayout.clearUi()
+            }
+        )
+    }
+
+    // This is still correct: it calls the method once as a side-effect.
+    LaunchedEffect(Unit) {
+        remoteUiLayout.presentPdfUiFromMyReSdk(
+            url = "https://css4.pub/2017/newsletter/drylab.pdf",
+            onSuccess = {
+                (context as? MainActivity)?.runOnUiThread {
+                    Toast.makeText(context, "SDK UI flow complete (RemoteUiLayout)!", Toast.LENGTH_SHORT).show()
+                }
+            })
     }
 }

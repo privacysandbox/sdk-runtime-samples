@@ -27,7 +27,11 @@ import androidx.privacysandbox.tools.PrivacySandboxCallback
  */
 @PrivacySandboxCallback
 interface RemotePdfCallbackInterface {
-    suspend fun onPdfSuccess()
-    suspend fun onPdfError()
-    suspend fun onPdfSaved()
+    fun onPdfLoadStart()
+    fun onPdfLoadProgress(progress: Int, downloadedBytes: Long, totalBytes: Long?)
+    fun onPdfLoadSuccess(absolutePath: String)
+    fun onError(error: String)
+    fun onPageChanged(currentPage: Int, totalPage: Int)
+    fun onPdfRenderStart()
+    fun onPdfRenderSuccess()
 }

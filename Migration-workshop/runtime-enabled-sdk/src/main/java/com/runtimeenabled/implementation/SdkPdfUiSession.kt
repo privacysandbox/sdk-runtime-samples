@@ -1,136 +1,216 @@
-/*
- * Copyright (C) 2025 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package com.runtimeenabled.implementation
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import androidx.core.graphics.toColorInt
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
 import androidx.privacysandbox.ui.provider.AbstractSandboxedUiAdapter.AbstractSession
 import com.rajat.pdfviewer.PdfRendererView
-import com.runtimeenabled.R
+import com.rajat.pdfviewer.util.CacheStrategy
 import com.runtimeenabled.api.RemotePdfCallbackInterface
 import com.runtimeenabled.api.RemotePdfRequest
+import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.cancel
-import java.util.concurrent.Executor
+import kotlinx.coroutines.launch
 
 class SdkPdfUiSession(
-    private val sdkContext: Context, // Use SDK's context for view inflation
+    private val sdkContext: Context,
     private val request: RemotePdfRequest,
-    private val remoteCallback: RemotePdfCallbackInterface, // Renamed for clarity
-    private val clientExecutor: Executor // Store for potential future use if needed for callbacks
+    private val remoteCallback: RemotePdfCallbackInterface,
+    private val clientExecutor: Executor
 ) : AbstractSession(), LifecycleOwner {
+
+    companion object {
+        const val TAG = "PdfSessionLifecycle"
+    }
+
+    private val instanceId = this.hashCode() // Unique ID for this session instance
 
     private val lifecycleRegistry = LifecycleRegistry(this)
     override val lifecycle: Lifecycle
         get() = lifecycleRegistry
 
-    // CoroutineScope tied to this session's lifecycle for managing PDF viewer tasks
-    // or other session-specific coroutines.
-    private val sessionCoroutineScope = CoroutineScope(clientExecutor.asCoroutineDispatcher() + Job())
-
     private var pdfViewer: PdfRendererView? = null
-
-    override val view: View = getPdfView()
-
-    private fun getPdfView(): View {
-        val rootView = View.inflate(sdkContext, R.layout.pdf_viewer_layout, null)
-        pdfViewer = rootView.findViewById(R.id.pdfView)
-
-        // Attach a View.OnAttachStateChangeListener to manage lifecycle transitions
-        pdfViewer?.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {
-                Log.d("PdfUiSession", "onViewAttachedToWindow. Current Lifecycle state: ${lifecycleRegistry.currentState}")
-                Log.d("PdfUiSession", "PDF View attached, lifecycle RESUMED")
-//                lifecycleRegistry.currentState = Lifecycle.State.STARTED
-//                lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-            }
-
-            override fun onViewDetachedFromWindow(v: View) {
-                Log.d("PdfUiSession", "onViewDetachedFromWindow. Current Lifecycle state: ${lifecycleRegistry.currentState}")
-                //Log.d("PdfUiSession", "PDF View detached, lifecycle DESTROYED")
-                // View is detached. Move lifecycle back to CREATED.
-                // The session is not necessarily closed yet.
-                // lifecycleRegistry.currentState = Lifecycle.State.STARTED // Go through STARTED first
-                // lifecycleRegistry.currentState = Lifecycle.State.CREATED
-                //Log.d("PdfUiSession", "PDF View detached, lifecycle CREATED")
-            }
-        })
-
-        pdfViewer?.initWithUrl(
-            url = request.url,
-            lifecycleCoroutineScope = this.lifecycleScope,
-            lifecycle = this.lifecycle
-        )
-
-        return rootView
-    }
+    private var isFirstPageRendered = false
 
     init {
+        // The session starts in the CREATED state.
+        lifecycleRegistry.currentState = Lifecycle.State.CREATED
+        Log.i(TAG, "[$instanceId] ++ SESSION CREATED ++. Lifecycle is CREATED.")
+    }
+
+    /**
+     * The root view is the PdfRendererView itself. Since it's a FrameLayout, we can add a
+     * ProgressBar directly to it as a child.
+     */
+    override val view: View by lazy {
+        Log.d(
+            TAG,
+            "[$instanceId] LAZY VIEW INIT: Creating overlay layout with determinate progress."
+        )
+        val container = FrameLayout(sdkContext)
+
+        // 1. Create the PdfRendererView and add it as the bottom layer.
+        pdfViewer =
+            PdfRendererView(sdkContext).apply {
+                layoutParams =
+                    FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
+            }
+        container.addView(pdfViewer)
+
+        // 2. Create the loading UI components.
+        val progressText =
+            TextView(sdkContext).apply {
+                text = "Loading PDF..."
+                setTextColor(Color.WHITE)
+            }
+
+        val progressBar =
+            ProgressBar(sdkContext, null, android.R.attr.progressBarStyleHorizontal).apply {
+                isIndeterminate = false
+                max = 100
+            }
+
+        val percentageText =
+            TextView(sdkContext).apply {
+                text = "0%"
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+            }
+
+        // 3. Create a container for the loading UI to keep it together.
+        val loadingUiContainer =
+            LinearLayout(sdkContext).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setBackgroundColor("#80000000".toColorInt()) // Semi-transparent black
+                setPadding(80, 80, 80, 80)
+                layoutParams =
+                    FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        Gravity.CENTER
+                    )
+                // Add the loading components to this inner container
+                addView(progressText)
+                addView(
+                    progressBar,
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+                addView(percentageText)
+            }
+        container.addView(loadingUiContainer)
+
+        // 4. Configure the PdfRendererView to update the progress bar.
+        configureAndLoadPdf(pdfViewer!!, loadingUiContainer, progressBar, percentageText)
+
+        // 5. Return the master container.
+        container
+    }
+
+    private fun configureAndLoadPdf(
+        pdfView: PdfRendererView,
+        loadingUi: View,
+        progressBar: ProgressBar,
+        percentageTextView: TextView
+    ) {
+        pdfView.statusListener =
+            object : PdfRendererView.StatusCallBack {
+                override fun onPdfLoadProgress(
+                    progress: Int,
+                    downloadedBytes: Long,
+                    totalBytes: Long?
+                ) {
+                    // Update the progress bar and percentage text on the main thread.
+                    loadingUi.post {
+                        progressBar.progress = progress
+                        percentageTextView.text = "$progress%"
+                    }
+                }
+
+                override fun onPdfRenderSuccess() {
+                    Log.d(TAG, "[$instanceId] PDF Render SUCCESS.")
+                    clientExecutor.execute { remoteCallback.onPdfRenderSuccess() }
+                    if (isFirstPageRendered) {
+                            loadingUi.postDelayed( {
+                                loadingUi.alpha = 0f
+                                loadingUi.isClickable = false
+                            }, 500)
+                    }
+                }
+
+                override fun onError(error: Throwable) {
+                    Log.e(TAG, "[$instanceId] PDF Render ERROR.", error)
+                    loadingUi.post {
+                        loadingUi.alpha = 0f
+                        loadingUi.isClickable = false
+                    }
+                    clientExecutor.execute {
+                        remoteCallback.onError(error.message ?: "Unknown Error")
+                    }
+                }
+
+                // Forward other callbacks as needed
+                override fun onPdfLoadStart() {
+                    clientExecutor.execute { remoteCallback.onPdfLoadStart() }
+                }
+
+                override fun onPageChanged(currentPage: Int, totalPage: Int) {
+                    if (!isFirstPageRendered) {
+                        Log.d(TAG, "[$instanceId] First page rendered. Hiding loading UI.")
+                        isFirstPageRendered = true
+                    }
+                    clientExecutor.execute { remoteCallback.onPageChanged(currentPage, totalPage) }
+                }
+            }
+
+        pdfView.initWithUrl(
+            url = request.url,
+            lifecycleCoroutineScope = this.lifecycleScope,
+            lifecycle = this.lifecycle,
+            cacheStrategy = CacheStrategy.MINIMIZE_CACHE
+        )
     }
 
     override fun close() {
-        Log.d("PdfUiSession", "Session close requested. Current Lifecycle state: ${lifecycleRegistry.currentState}")
+        Log.e(TAG, "[$instanceId] -- SESSION CLOSE REQUESTED --", Exception("Stack trace"))
+        if (lifecycleRegistry.currentState != Lifecycle.State.DESTROYED) {
+            lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+            Log.e(TAG, "[$instanceId] Session lifecycle is now DESTROYED.")
+        }
         pdfViewer?.closePdfRender()
-        sessionCoroutineScope.cancel("PdfUiSession closed")
         pdfViewer = null
     }
 
-    // --- Other AbstractSession methods ---
-    // These are called by the system when the corresponding events occur on the client side.
-
-    override fun notifyConfigurationChanged(configuration: Configuration) {
-        // The hosting Activity's configuration changed.
-        // You might need to inform your PDF viewer or re-layout if it doesn't handle this automatically.
-        Log.d("PdfUiSession", "notifyConfigurationChanged: $configuration")
-        // pdfViewer?.onConfigurationChanged(configuration) // If such a method exists
-    }
-
+    // --- Other methods for logging ---
     override fun notifyResized(width: Int, height: Int) {
-        // The SandboxedSdkView in the client app has been resized.
-        // The PDF view within your SDK should adapt. Often, standard Android layout mechanisms handle this.
-        Log.d("PdfUiSession", "notifyResized: width=$width, height=$height")
-        // pdfViewer?.layoutParams = pdfViewer?.layoutParams?.apply {
-        //     this.width = width
-        //     this.height = height
-        // }
-        // pdfViewer?.requestLayout()
+        Log.d(TAG, "[$instanceId] notifyResized: w=$width, h=$height")
     }
 
-    override fun notifyUiChanged(uiContainerInfo: Bundle) {
-        // Provides information about the UI container in the client app,
-        // like on-screen geometry, opacity.
-        //val sandboxedSdkViewUiInfo = SandboxedSdkViewUiInfo.fromBundle(uiContainerInfo)
-        //Log.d("PdfUiSession", "notifyUiChanged: $sandboxedSdkViewUiInfo")
-    }
+    // Other non-logging methods
+    override fun notifyConfigurationChanged(configuration: Configuration) {}
 
-    override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {
-        // Informs if the SDK's UI is now on top (e.g., for SurfaceView Z-ordering).
-        // Usually less relevant for View-based UIs unless you're doing something specific with layering.
-        Log.d("PdfUiSession", "notifyZOrderChanged: isZOrderOnTop=$isZOrderOnTop")
-    }
+    override fun notifyUiChanged(uiContainerInfo: Bundle) {}
+
+    override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {}
 }
