@@ -63,7 +63,7 @@ kotlin-stdlib-jdk8 = { module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8", versi
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 
-# Privacy Sandbox (SDK Runtime Focused)
+# SDK Runtime Focused
 sdkruntime-backcompat-client = { module = "androidx.privacysandbox.sdkruntime:sdkruntime-client", version.ref = "sdkRuntimeBackcompat" }
 sdkruntime-backcompat-core = { module = "androidx.privacysandbox.sdkruntime:sdkruntime-core", version.ref = "sdkRuntimeBackcompat" }
 sdkruntime-backcompat-provider = { module = "androidx.privacysandbox.sdkruntime:sdkruntime-provider", version.ref = "sdkRuntimeBackcompat" }
