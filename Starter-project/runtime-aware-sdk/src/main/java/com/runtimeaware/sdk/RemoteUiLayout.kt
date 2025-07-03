@@ -1,6 +1,5 @@
 package com.runtimeaware.sdk
 
-import android.R
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
@@ -14,7 +13,7 @@ import com.runtimeenabled.api.RemoteUiRequest
 
 class RemoteUiLayout(context: Context, attrs: AttributeSet?) : LinearLayout(context, attrs) {
 
-    constructor(context: Context) : this(context, null) // Allow programmatic creation
+    constructor(context: Context) : this(context, null)
 
     suspend fun presentUiFromMyReSdk(message: String, onSuccess: () -> Unit) {
         if (!isSdkLoaded()) return
@@ -41,7 +40,6 @@ class RemoteUiLayout(context: Context, attrs: AttributeSet?) : LinearLayout(cont
         addViewToLayout(sandboxedSdkView)
         //Set the SSV's adapter to the obtained one
         sandboxedSdkView.setAdapter(adapter)
-
     }
 
     fun clearUi() {

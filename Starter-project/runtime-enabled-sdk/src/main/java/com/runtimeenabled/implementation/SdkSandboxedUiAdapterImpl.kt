@@ -36,32 +36,28 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 
 /**
- * Implementation of [SdkSandboxedUiAdapter] that handles requests for the payment UI.
+ * Implementation of [SdkSandboxedUiAdapter] that handles requests for Remote UI.
  *
  * This class extends [AbstractSandboxedUiAdapter] and provides the functionality to open
  * UI sessions. The usage of [AbstractSandboxedUiAdapter] simplifies the implementation.
+ * Sessions are generated through a Session factory to allow for more flexibility in
+ * UI presentation.
  *
  * @param sdkContext The context of the SDK.
  * @param request The payment UI request.
  */
-class SdkSandboxedUiAdapterImpl(
+class SdkSandboxedUiAdapterImpl<Req, CallbackIF, SessionType : AbstractSandboxedUiAdapter.AbstractSession>(
     private val sdkContext: Context,
-    private val request: RemoteUiRequest,
-    private val callback: RemoteUiCallbackInterface,
-) : AbstractSandboxedUiAdapter(), SdkSandboxedUiAdapter {
-    /**
-     * Opens a new session to display remote UI.
-     * The session will handle notifications from and to the client.
-     * We consider the client the owner of the SandboxedSdkView.
-     *
-    @param context The client's context.
-     * @param sessionData Constants related to the session, such as the presentation id.
-     * @param initialWidth The initial width of the adapter's view.
-     * @param initialHeight The initial height of the adapter's view.
-     * @param isZOrderOnTop Whether the session's view should be drawn on top of other views.
-     * @param clientExecutor The executor to use for client callbacks.
-     * @param client A UI adapter representing the client of this single session.
-     */
+    private val request: Req,
+    private val callback: CallbackIF,
+    private val sessionFactory: (
+        sdkContext: Context,
+        request: Req,
+        callback: CallbackIF,
+        clientExecutor: Executor
+    ) -> SessionType) :
+    AbstractSandboxedUiAdapter(), SdkSandboxedUiAdapter {
+
     override fun openSession(
         context: Context,
         sessionData: SessionData,
@@ -71,65 +67,9 @@ class SdkSandboxedUiAdapterImpl(
         clientExecutor: Executor,
         client: SandboxedUiAdapter.SessionClient
     ) {
-        val session = SdkUiSession(clientExecutor, sdkContext, request, callback)
+        val session = sessionFactory(sdkContext, request, callback, clientExecutor)
         clientExecutor.execute {
             client.onSessionOpened(session)
         }
-    }
-}
-
-/**
- * Implementation of [SandboxedUiAdapter.Session], used for payment UI requests.
- * This class extends [AbstractSandboxedUiAdapter.AbstractSession] to provide the functionality in
- * cohesion with [AbstractSandboxedUiAdapter]
- *
- * @param clientExecutor The executor to use for client callbacks.
- * @param sdkContext The context of the SDK.
- * @param request The payment UI request.
- */
-private class SdkUiSession(
-    clientExecutor: Executor,
-    private val sdkContext: Context,
-    private val request: RemoteUiRequest,
-    private val callback: RemoteUiCallbackInterface,
-) : AbstractSandboxedUiAdapter.AbstractSession() {
-
-    /** A scope for launching coroutines in the client executor. */
-    private val scope = CoroutineScope(clientExecutor.asCoroutineDispatcher() + Job())
-
-    override val view: View = getRemoteView()
-
-    private fun getRemoteView(): View {
-        val view = View.inflate(sdkContext, R.layout.message, null).apply {
-            findViewById<TextView>(R.id.message).text = request.message
-            findViewById<Button>(R.id.button).setOnClickListener {
-                scope.launch {
-                    callback.onDoSomething()
-                }
-            }
-        }
-        return view
-    }
-
-    override fun close() {
-        // Notifies that the client has closed the session. It's a good opportunity to dispose
-        // any resources that were acquired to maintain the session.
-        scope.cancel()
-    }
-
-    override fun notifyConfigurationChanged(configuration: Configuration) {
-        // Notifies that the device configuration has changed and affected the app.
-    }
-
-    override fun notifyResized(width: Int, height: Int) {
-        // Notifies that the size of the presentation area in the app has changed.
-    }
-
-    override fun notifyUiChanged(uiContainerInfo: Bundle) {
-        // Notify the session when the presentation state of its UI container has changed.
-    }
-
-    override fun notifyZOrderChanged(isZOrderOnTop: Boolean) {
-        // Notifies that the Z order has changed for the UI associated by this session.
     }
 }

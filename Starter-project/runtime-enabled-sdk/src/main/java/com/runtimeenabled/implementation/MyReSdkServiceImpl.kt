@@ -15,24 +15,13 @@
  */
 package com.runtimeenabled.implementation
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.os.Process
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.util.Log
 import androidx.annotation.RequiresApi
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import androidx.privacysandbox.activity.core.SdkActivityLauncher
-import androidx.privacysandbox.sdkruntime.core.activity.ActivityHolder
-import androidx.privacysandbox.sdkruntime.core.activity.SdkSandboxActivityHandlerCompat
-import androidx.privacysandbox.sdkruntime.core.controller.SdkSandboxControllerCompat
 import androidx.privacysandbox.ui.core.SandboxedSdkViewUiInfo
 import androidx.privacysandbox.ui.core.SandboxedUiAdapterSignalOptions
 import androidx.privacysandbox.ui.core.SessionObserver
@@ -49,16 +38,9 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 
-
 class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
 
-    private val controller = SdkSandboxControllerCompat.from(context)
-
     override suspend fun initialize() {
-    }
-
-    override suspend fun showFullscreenUi(activityLauncher: SdkActivityLauncher) {
-        TODO("Not yet implemented")
     }
 
     override suspend fun getRemoteUiAdapter(
@@ -66,8 +48,12 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
         callback: RemoteUiCallbackInterface
     ): SdkSandboxedUiAdapter {
         val remoteUiAdapter = SdkSandboxedUiAdapterImpl(
-            context, request, callback
-        )
+            context,
+            request,
+            callback
+        ) { sdkCtx, req, cb, clientEx ->
+            SdkMessageUiSession(clientExecutor = clientEx, sdkContext = sdkCtx, request = req, callback = cb)
+        }
         remoteUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
         return remoteUiAdapter
     }
@@ -91,6 +77,10 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
 
     override suspend fun triggerProcessDeath() {
         Process.killProcess(Process.myPid())
+    }
+
+    override suspend fun showFullscreenUi(activityLauncher: SdkActivityLauncher) {
+        TODO("Not yet implemented")
     }
 }
 

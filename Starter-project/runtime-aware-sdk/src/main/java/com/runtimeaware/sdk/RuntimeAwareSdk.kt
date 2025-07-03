@@ -32,24 +32,7 @@ import java.util.concurrent.Executor // Required for the callback
  */
 class RuntimeAwareSdk(private val context: Context) { // Use context for broader lifecycle
 
-    // Executor for the death callback. You can use a cached thread pool or a single thread executor.
-    // For simplicity, using a direct executor for this example, but consider your threading needs.
-    // For UI updates from the callback, ensure you switch to the main thread.
-    private val deathCallbackExecutor: Executor = Executor { command -> command.run() } // Or Executors.newSingleThreadExecutor()
     private var sandboxManager: SdkSandboxManagerCompat? = null
-
-    // Optional: A client-provided callback to be invoked on sandbox death
-    private var onSandboxDeathClientCallback: (() -> Unit)? = null
-
-    /**
-     * Registers a callback to be invoked if the SDK sandbox process dies.
-     * The callback will be executed on the thread provided by [deathCallbackExecutor].
-     *
-     * @param callback The lambda to execute when the sandbox process dies.
-     */
-    fun setOnSandboxDeathCallback(callback: () -> Unit) {
-        this.onSandboxDeathClientCallback = callback
-    }
 
 
     /**
@@ -61,8 +44,7 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
             sandboxManager = SdkSandboxManagerCompat.from(context)
         }
 
-        // Register the death callback once the sandbox manager is available.
-        // This should ideally be done before any SDK loading attempts.
+        // Register the death callback
         try {
             val deathCallback = SandboxDeathCallback()
             sandboxManager?.addSdkSandboxProcessDeathCallback(
@@ -71,10 +53,7 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
             )
             Log.d(TAG, "SDK sandbox death callback registered.")
         } catch (e: Exception) {
-            // This can happen if the sandbox is not available or other issues.
             Log.e(TAG, "Failed to register SDK sandbox death callback.", e)
-            // Depending on your app's requirements, you might want to consider this a fatal error
-            // or attempt to proceed without the death callback.
         }
 
         val isRuntimeEnabledSdkLoaded = loadSdkIfNeeded() != null
@@ -93,6 +72,22 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
         }
     }
 
+    //--- Handling process death
+
+    // Executor for the death callback.
+    private val deathCallbackExecutor: Executor = Executor { command -> command.run() } // Or Executors.newSingleThreadExecutor()
+
+    private var onSandboxDeathClientCallback: (() -> Unit)? = null
+
+    /**
+     * Registers a callback to be invoked if the SDK sandbox process dies.
+     * The callback will be executed on the thread provided by [deathCallbackExecutor].
+     *
+     * @param callback The lambda to execute when the sandbox process dies.
+     */
+    fun setOnSandboxDeathCallback(callback: () -> Unit) {
+        this.onSandboxDeathClientCallback = callback
+    }
     suspend fun triggerProcessDeath() {
         if (!isSdkLoaded()) {
             throw IllegalStateException("SDK not loaded. Please call initialize() first.")
@@ -111,31 +106,17 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
         }
         override fun onSdkSandboxDied() {
             Log.e(TAG, "SDK Sandbox process died! State is lost. SDKs need to be reloaded by the client.")
-            //TODO: Update UI to reflect this.
 
             // The sandbox process has died. The SDK is no longer usable.
             // Reset the loaded SDK instance.
             remoteInstance = null
 
-            // Here you can implement logic to:
-            // 1. Notify the client app (e.g., via a callback or event bus)
-            // 2. Attempt to reload the SDK (perhaps with a backoff strategy)
-            // 3. Update UI to reflect that the SDK is unavailable
-
             // Invoke the client-provided callback if it's set
             onSandboxDeathClientCallback?.invoke()
 
-            // Example: You might want to automatically try to re-initialize the SDK.
-            // Be cautious with automatic re-initialization to avoid loops if the sandbox keeps crashing.
-            // GlobalScope.launch { // Or a specific coroutine scope tied to your SDK's lifecycle
-            //     Log.d(TAG, "Attempting to re-initialize SDK after sandbox death...")
-            //     initialize() // This will also re-register the death callback
-            // }
         }
     }
 
-    // Expose these methods from the instance, calling the companion object's methods
-    // This allows the instance to manage context and sandboxManager properly.
     private suspend fun loadSdkIfNeeded(): MyReSdkService? {
         val manager = this.sandboxManager ?: SdkSandboxManagerCompat.from(context).also { this.sandboxManager = it }
         return loadSdkIfNeeded(context, manager)
@@ -145,35 +126,31 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
     companion object Loader {
         private const val TAG = "RuntimeAwareSdk"
 
-        /**
-         * Name of the SDK to be loaded.
-         */
+        // Package name of the SDK to load
         private const val SDK_NAME = "com.runtimeenabled.sdk"
 
         @Volatile // Ensure visibility across threads
         private var remoteInstance: MyReSdkService? = null
 
-        // This method should be internal or private to RuntimeAwareSdk
-        // and called by the instance methods.
         suspend fun loadSdkIfNeeded(context: Context, manager: SdkSandboxManagerCompat? = null): MyReSdkService? {
-            //If no manager is being passed, it means that it's being called from outside this class
+
             val currentManager = manager ?: SdkSandboxManagerCompat.from(context)
-            
+
             try {
                 if (remoteInstance != null) return remoteInstance
 
                 Log.d(TAG, "Loading SDK: $SDK_NAME")
                 val sandboxedSdk = currentManager.loadSdk(SDK_NAME, Bundle.EMPTY)
                 val service = MyReSdkServiceFactory.wrapToMyReSdkService(sandboxedSdk.getInterface()!!)
-                service.initialize() // Initialize the SDK service from the runtime-enabled SDK
+                service.initialize()
                 remoteInstance = service
                 Log.d(TAG, "SDK loaded successfully: $SDK_NAME")
                 return remoteInstance
             } catch (e: LoadSdkCompatException) {
                 Log.e(TAG, "Failed to load SDK ($SDK_NAME), error code: ${e.loadSdkErrorCode}", e)
-                remoteInstance = null // Ensure it's null on failure
+                remoteInstance = null
                 return null
-            } catch (e: Exception) { // Catch other potential exceptions during loading
+            } catch (e: Exception) {
                 Log.e(TAG, "An unexpected error occurred while loading SDK ($SDK_NAME)", e)
                 remoteInstance = null
                 return null
@@ -182,14 +159,6 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
 
         fun isSdkLoaded(): Boolean {
             return remoteInstance != null
-        }
-
-        // Method to explicitly unload/reset the SDK, e.g., after sandbox death
-        fun unloadSdk(context: Context, manager: SdkSandboxManagerCompat? = null) {
-            val currentManager = manager ?: SdkSandboxManagerCompat.from(context)
-            Log.d(TAG, "Unloading SDK instance.")
-            remoteInstance = null
-            currentManager.unloadSdk(SDK_NAME)
         }
     }
 }
