@@ -15,10 +15,12 @@
  */
 package com.runtimeenabled.implementation
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.os.Process
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -47,6 +49,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 
+
 class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
 
     private val controller = SdkSandboxControllerCompat.from(context)
@@ -55,35 +58,7 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
     }
 
     override suspend fun showFullscreenUi(activityLauncher: SdkActivityLauncher) {
-        val webView = WebView(context)
-        initializeWebViewSettings(webView.settings)
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldOverrideUrlLoading(
-                view: WebView, request: WebResourceRequest
-            ): Boolean {
-                return false
-            }
-        }
-        webView.loadUrl("https://privacysandbox.google.com/")
-
-        val handler = object : SdkSandboxActivityHandlerCompat {
-            @RequiresApi(Build.VERSION_CODES.R)
-            override fun onActivityCreated(activityHolder: ActivityHolder) {
-                val activityHandler = ActivityHandler(activityHolder, webView)
-                activityHandler.buildLayout()
-
-                ViewCompat.setOnApplyWindowInsetsListener(
-                    activityHolder.getActivity().window.decorView) { view, windowInsets ->
-                    val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
-                    view.updatePadding(top = insets.top)
-                    WindowInsetsCompat.CONSUMED
-                }
-            }
-        }
-
-        val token = controller.registerSdkSandboxActivityHandler(handler)
-        val launched = activityLauncher.launchSdkActivity(token)
-        if (!launched) controller.unregisterSdkSandboxActivityHandler(handler)
+        TODO("Not yet implemented")
     }
 
     override suspend fun getRemoteUiAdapter(
@@ -114,17 +89,8 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
         return "Created $actualFileSize MB file successfully"
     }
 
-    private fun initializeWebViewSettings(settings: WebSettings) {
-        settings.javaScriptEnabled = true
-        settings.setGeolocationEnabled(true)
-        settings.setSupportZoom(true)
-        settings.databaseEnabled = true
-        settings.domStorageEnabled = true
-        settings.allowFileAccess = true
-        settings.allowContentAccess = true
-        settings.useWideViewPort = true
-        settings.loadWithOverviewMode = true
-        settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
+    override suspend fun triggerProcessDeath() {
+        Process.killProcess(Process.myPid())
     }
 }
 
