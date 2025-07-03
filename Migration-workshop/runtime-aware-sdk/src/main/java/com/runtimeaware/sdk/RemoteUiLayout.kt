@@ -91,47 +91,6 @@ class RemoteUiLayout(context: Context, attrs: AttributeSet?) : LinearLayout(cont
         Log.d(TAG, "presentPdfUiFromMyReSdk CALLED.")
         if (!isSdkLoaded()) return
 
-        val progressText =
-            TextView(context).apply {
-                text = "Loading PDF..."
-                setTextColor(Color.WHITE)
-            }
-
-        val progressBar =
-            ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-                isIndeterminate = false
-                max = 100
-            }
-
-        val percentageText =
-            TextView(context).apply {
-                text = "0%"
-                setTextColor(Color.WHITE)
-                gravity = Gravity.CENTER
-            }
-
-        val loadingUiContainer =
-            LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                setBackgroundColor("#80000000".toColorInt()) // Semi-transparent black
-                setPadding(80, 80, 80, 80)
-                layoutParams =
-                    FrameLayout.LayoutParams(
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        FrameLayout.LayoutParams.MATCH_PARENT,
-                        Gravity.CENTER
-                    )
-                // Add the loading components to this inner container
-                addView(progressText)
-                addView(
-                    progressBar,
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT
-                )
-                addView(percentageText)
-            }
-
         viewScope.launch {
             val sdk = loadSdkIfNeeded(context) ?: return@launch
             var adapter: SdkSandboxedUiAdapter? = null

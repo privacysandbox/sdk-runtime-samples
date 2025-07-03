@@ -141,7 +141,6 @@ class SdkPdfUiSession(
                     downloadedBytes: Long,
                     totalBytes: Long?
                 ) {
-                    // Update the progress bar and percentage text on the main thread.
                     loadingUi.post {
                         progressBar.progress = progress
                         percentageTextView.text = "$progress%"
@@ -155,7 +154,7 @@ class SdkPdfUiSession(
                             loadingUi.postDelayed( {
                                 loadingUi.alpha = 0f
                                 loadingUi.isClickable = false
-                            }, 500)
+                            }, 30)
                     }
                 }
 
