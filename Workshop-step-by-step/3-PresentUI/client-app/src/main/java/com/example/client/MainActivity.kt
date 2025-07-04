@@ -343,8 +343,8 @@ fun SdkUiDialog(message: String, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         AndroidView(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp),
+            .fillMaxWidth()
+            .height(300.dp),
             factory = { ctx ->
                 RemoteUiLayout(ctx).also { layout ->
                     coroutineScope.launch {
@@ -358,7 +358,6 @@ fun SdkUiDialog(message: String, onDismiss: () -> Unit) {
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
-                                onDismiss()
                             }
                         )
                     }
