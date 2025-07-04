@@ -23,14 +23,12 @@ interface MyReSdkService {
 
     suspend fun initialize()
 
-    suspend fun showFullscreenUi(activityLauncher: SdkActivityLauncher)
+    suspend fun createFile(sizeInMb: Long): String
+
+    suspend fun triggerProcessDeath()
 
     suspend fun getRemoteUiAdapter(
         request: RemoteUiRequest,
         callback: RemoteUiCallbackInterface
     ): SdkSandboxedUiAdapter
-
-    suspend fun createFile(sizeInMb: Long): String
-
-    suspend fun triggerProcessDeath()
 }

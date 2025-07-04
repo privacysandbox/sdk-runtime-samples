@@ -16,68 +16,115 @@
 package com.runtimeaware.sdk
 
 import android.content.Context
-import android.os.Bundle
 import android.util.Log
 import androidx.privacysandbox.sdkruntime.client.SdkSandboxManagerCompat
 import androidx.privacysandbox.sdkruntime.client.SdkSandboxProcessDeathCallbackCompat
 import androidx.privacysandbox.sdkruntime.core.LoadSdkCompatException
-import com.runtimeenabled.api.MyReSdkService
-import com.runtimeenabled.api.MyReSdkServiceFactory
-import java.util.concurrent.Executor // Required for the callback
+import com.runtimeaware.sdk.ReSdkLoader.getSdkService
+import com.runtimeaware.sdk.ReSdkLoader.isSdkLoaded
+import com.runtimeaware.sdk.ReSdkLoader.unloadSdk
+import java.util.concurrent.Executor
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
- * This class represents an SDK that was created before the SDK runtime was available. It is in the
- * process of migrating to use the SDK runtime. At this point, all of the functionality has been
- * migrated to the "runtime enabled SDK" and this SDK merely serves as a wrapper.
+ * The Runtime-Aware SDK is a statically linked library that works as a translation interface
+ * between the app and the Runtime-Enabled SDK.
  */
-class RuntimeAwareSdk(private val context: Context) { // Use context for broader lifecycle
+class RuntimeAwareSdk(private val context: Context) {
 
-    private var sandboxManager: SdkSandboxManagerCompat? = null
 
+
+    // Handling process death
+    // Executor for the death callback.
+    private val deathCallbackExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    private val deathCallback = SandboxDeathCallback()
+
+    private var onSandboxDeathClientCallback: (() -> Unit)? = null
 
     /**
-     * Initialize the SDK. If the SDK failed to initialize, return false, else true.
+     * Initializes the SDK.
+     *
+     * This function attempts to load the RE (Runtime-Enabled) SDK into the SDK Sandbox.
+     * It also registers a callback to handle the death of the SDK sandbox process.
+     *
+     * @return `true` if the RE SDK is successfully loaded and the service is available,
+     *         `false` otherwise.
+     * @throws LoadSdkCompatException if there's an issue loading the SDK into the sandbox.
+     *                               This can happen for various reasons, such as the RE SDK
+     *                               not being installed or version incompatibility.
+     * @see SdkSandboxManagerCompat.loadSdk
+     * @see SdkSandboxProcessDeathCallbackCompat
      */
     suspend fun initialize(): Boolean {
-        // Initialize the sandbox manager if not already done
-        if (sandboxManager == null) {
-            sandboxManager = SdkSandboxManagerCompat.from(context)
-        }
-
-        // Register the death callback
+        val sandboxManager = SdkSandboxManagerCompat.from(context)
         try {
-            val deathCallback = SandboxDeathCallback()
-            sandboxManager?.addSdkSandboxProcessDeathCallback(
+            sandboxManager.addSdkSandboxProcessDeathCallback(
                 deathCallbackExecutor,
                 deathCallback
             )
-            Log.d(TAG, "SDK sandbox death callback registered.")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to register SDK sandbox death callback.", e)
         }
-
-        val isRuntimeEnabledSdkLoaded = loadSdkIfNeeded() != null
-        return isRuntimeEnabledSdkLoaded
+        return getSdkService(context) != null
     }
 
-    suspend fun createFile(size: Long): Pair<Boolean, String?> {
+    /**
+     * Unregisters the sandbox death callback and shuts down the executor.
+     * This should be called when the SDK is no longer needed to prevent resource leaks.
+     */
+    fun close() {
+        val sandboxManager = SdkSandboxManagerCompat.from(context)
+        try {
+            sandboxManager.removeSdkSandboxProcessDeathCallback(deathCallback)
+        } catch(e: Exception) {
+            Log.w(TAG, "Failed to unregister death callback.", e)
+        }
+        deathCallbackExecutor.shutdown()
+    }
+
+    /**
+     * Creates a file in the RE SDK's sandbox.
+     *
+     * This function is a wrapper around the RE SDK's `createFile` method. It demonstrates
+     * a more idiomatic Kotlin approach to handling operations that can fail by returning
+     * a `Result` object.
+     *
+     * @param size The size of the file to create in megabytes.
+     * @return A `Result` object that encapsulates the outcome:
+     *         - On success, it holds a `Result.success` with the file path (`String?`).
+     *         - On failure, it holds a `Result.failure` with the `Exception` that occurred.
+     * @throws IllegalStateException if the SDK has not been initialized before calling this method.
+     */
+    suspend fun createFile(size: Long): Result<String?> {
+        val sdkService = getSdkService(context)
+            ?: throw IllegalStateException("RE SDK not loaded. Please call initialize() first.")
+
+        return runCatching {
+            sdkService.createFile(size)
+        }.onFailure { e ->
+            Log.e(TAG, "Failed to create file", e)
+        }
+    }
+
+    /**
+     * Triggers the death of the SDK runtime process for testing purposes.
+     * This method is intended for testing how the app and SDK handle sandbox process death.
+     * It will attempt to call the `triggerProcessDeath` method on the RE SDK service.
+     *
+     * @throws IllegalStateException if the SDK has not been initialized.
+     */
+    suspend fun triggerProcessDeath() {
         if (!isSdkLoaded()) {
             throw IllegalStateException("SDK not loaded. Please call initialize() first.")
         }
         try {
-            return Pair(true, loadSdkIfNeeded()?.createFile(size))
+            getSdkService(context)?.triggerProcessDeath()
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to create file", e)
-            return Pair(false, "Failed to create file: ${e.message}")
+            Log.e(TAG, "Failed to kill SDK runtime process", e)
         }
     }
-
-    //--- Handling process death
-
-    // Executor for the death callback.
-    private val deathCallbackExecutor: Executor = Executor { command -> command.run() } // Or Executors.newSingleThreadExecutor()
-
-    private var onSandboxDeathClientCallback: (() -> Unit)? = null
 
     /**
      * Registers a callback to be invoked if the SDK sandbox process dies.
@@ -88,16 +135,6 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
     fun setOnSandboxDeathCallback(callback: () -> Unit) {
         this.onSandboxDeathClientCallback = callback
     }
-    suspend fun triggerProcessDeath() {
-        if (!isSdkLoaded()) {
-            throw IllegalStateException("SDK not loaded. Please call initialize() first.")
-        }
-        try {
-            loadSdkIfNeeded()?.triggerProcessDeath()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to kill SDK runtime process", e)
-        }
-    }
 
     // Inner class for the death callback
     private inner class SandboxDeathCallback : SdkSandboxProcessDeathCallbackCompat {
@@ -105,60 +142,21 @@ class RuntimeAwareSdk(private val context: Context) { // Use context for broader
             Log.d(TAG, "SandboxDeathCallback initialized.")
         }
         override fun onSdkSandboxDied() {
-            Log.e(TAG, "SDK Sandbox process died! State is lost. SDKs need to be reloaded by the client.")
+            Log.e(TAG, "SDK Sandbox process died! State is lost. " +
+                    "SDKs need to be reloaded by the client.")
 
-            // The sandbox process has died. The SDK is no longer usable.
-            // Reset the loaded SDK instance.
-            remoteInstance = null
+            // The sandbox process has died. Reset our internal state FIRST.
+            unloadSdk()
 
-            // Invoke the client-provided callback if it's set
+            // Now, notify the client (UI) that it can reload.
             onSandboxDeathClientCallback?.invoke()
 
+            // It's generally safer to unregister the callback after we are done.
+            close()
         }
     }
 
-    private suspend fun loadSdkIfNeeded(): MyReSdkService? {
-        val manager = this.sandboxManager ?: SdkSandboxManagerCompat.from(context).also { this.sandboxManager = it }
-        return loadSdkIfNeeded(context, manager)
-    }
-
-    /** Keeps a reference to a sandboxed SDK and makes sure it's only loaded once. */
-    companion object Loader {
-        private const val TAG = "RuntimeAwareSdk"
-
-        // Package name of the SDK to load
-        private const val SDK_NAME = "com.runtimeenabled.sdk"
-
-        @Volatile // Ensure visibility across threads
-        private var remoteInstance: MyReSdkService? = null
-
-        suspend fun loadSdkIfNeeded(context: Context, manager: SdkSandboxManagerCompat? = null): MyReSdkService? {
-
-            val currentManager = manager ?: SdkSandboxManagerCompat.from(context)
-
-            try {
-                if (remoteInstance != null) return remoteInstance
-
-                Log.d(TAG, "Loading SDK: $SDK_NAME")
-                val sandboxedSdk = currentManager.loadSdk(SDK_NAME, Bundle.EMPTY)
-                val service = MyReSdkServiceFactory.wrapToMyReSdkService(sandboxedSdk.getInterface()!!)
-                service.initialize()
-                remoteInstance = service
-                Log.d(TAG, "SDK loaded successfully: $SDK_NAME")
-                return remoteInstance
-            } catch (e: LoadSdkCompatException) {
-                Log.e(TAG, "Failed to load SDK ($SDK_NAME), error code: ${e.loadSdkErrorCode}", e)
-                remoteInstance = null
-                return null
-            } catch (e: Exception) {
-                Log.e(TAG, "An unexpected error occurred while loading SDK ($SDK_NAME)", e)
-                remoteInstance = null
-                return null
-            }
-        }
-
-        fun isSdkLoaded(): Boolean {
-            return remoteInstance != null
-        }
+    companion object {
+        private const val TAG = "RuntimeAwareSdk" // More descriptive and conventional
     }
 }

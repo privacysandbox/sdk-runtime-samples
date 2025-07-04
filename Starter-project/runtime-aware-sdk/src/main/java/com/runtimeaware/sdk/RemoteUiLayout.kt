@@ -6,8 +6,8 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
-import com.runtimeaware.sdk.RuntimeAwareSdk.Loader.isSdkLoaded
-import com.runtimeaware.sdk.RuntimeAwareSdk.Loader.loadSdkIfNeeded
+import com.runtimeaware.sdk.ReSdkLoader.isSdkLoaded
+import com.runtimeaware.sdk.ReSdkLoader.getSdkService
 import com.runtimeenabled.api.RemoteUiCallbackInterface
 import com.runtimeenabled.api.RemoteUiRequest
 
@@ -16,8 +16,10 @@ class RemoteUiLayout(context: Context, attrs: AttributeSet?) : LinearLayout(cont
     constructor(context: Context) : this(context, null)
 
     suspend fun presentUiFromMyReSdk(message: String, onSuccess: () -> Unit) {
+        //This should never happen, because the button to call this function is disabled until the SDK is loaded
         if (!isSdkLoaded()) return
 
+        //Create the SandboxedSdkView to encapsulate the UI
         val sandboxedSdkView = SandboxedSdkView(context)
 
         //Create the request
@@ -25,18 +27,15 @@ class RemoteUiLayout(context: Context, attrs: AttributeSet?) : LinearLayout(cont
         val callback = object : RemoteUiCallbackInterface {
             override suspend fun onDoSomething() {
                 Toast.makeText(context, "Something was done", Toast.LENGTH_SHORT).show()
-                onSuccess
+                onSuccess()
             }
         }
-        //Fetch the UI adapter from the SDK.
-        val sdk = loadSdkIfNeeded(context)
-            ?: throw IllegalStateException("SDK could not be loaded")
-        val adapter = sdk.getRemoteUiAdapter(
+
+        val adapter = getSdkService(context)?.getRemoteUiAdapter(
             request,
             callback
         )
 
-        //Create the SandboxedSdkView to encapsulate the UI
         addViewToLayout(sandboxedSdkView)
         //Set the SSV's adapter to the obtained one
         sandboxedSdkView.setAdapter(adapter)

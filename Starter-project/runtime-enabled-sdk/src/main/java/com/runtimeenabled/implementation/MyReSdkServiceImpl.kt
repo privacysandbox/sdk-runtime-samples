@@ -43,21 +43,6 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
     override suspend fun initialize() {
     }
 
-    override suspend fun getRemoteUiAdapter(
-        request: RemoteUiRequest,
-        callback: RemoteUiCallbackInterface
-    ): SdkSandboxedUiAdapter {
-        val remoteUiAdapter = SdkSandboxedUiAdapterImpl(
-            context,
-            request,
-            callback
-        ) { sdkCtx, req, cb, clientEx ->
-            SdkMessageUiSession(clientExecutor = clientEx, sdkContext = sdkCtx, request = req, callback = cb)
-        }
-        remoteUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
-        return remoteUiAdapter
-    }
-
     @RequiresApi(Build.VERSION_CODES.O)
     override suspend fun createFile(sizeInMb: Long): String {
         val path = Paths.get(
@@ -79,8 +64,19 @@ class MyReSdkServiceImpl(private val context: Context) : MyReSdkService {
         Process.killProcess(Process.myPid())
     }
 
-    override suspend fun showFullscreenUi(activityLauncher: SdkActivityLauncher) {
-        TODO("Not yet implemented")
+    override suspend fun getRemoteUiAdapter(
+        request: RemoteUiRequest,
+        callback: RemoteUiCallbackInterface
+    ): SdkSandboxedUiAdapter {
+        val remoteUiAdapter = SdkSandboxedUiAdapterImpl(
+            context,
+            request,
+            callback
+        ) { sdkCtx, req, cb, clientEx ->
+            SdkMessageUiSession(clientExecutor = clientEx, sdkContext = sdkCtx, request = req, callback = cb)
+        }
+        remoteUiAdapter.addObserverFactory(SessionObserverFactoryImpl())
+        return remoteUiAdapter
     }
 }
 
